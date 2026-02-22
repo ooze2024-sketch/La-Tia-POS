@@ -1,23 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { productAPI, categoryAPI, inventoryAPI, salesAPI, authAPI, clearAuthToken } from "../services/api";
 import "./AdminPage.css";
 
 interface FoodItem {
-  id: string;
+  id: number;
   name: string;
-  category: string;
+  category_id: number;
+  category?: string;
   cost: number;
   price: number;
   description: string;
 }
 
 interface FoodCategory {
-  id: string;
+  id: number;
   name: string;
 }
 
 interface InventoryItem {
-  id: string;
+  id: number;
   name: string;
   quantity: number;
   unit: string;
@@ -55,37 +57,8 @@ function Admin() {
     cost: "",
     price: "",
   });
-  // Initialize with sample transaction data
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [transactions, _setTransactions] = useState<Transaction[]>([
-    {
-      id: "1",
-      itemName: "Adobo",
-      quantity: 2,
-      amount: 50,
-      paymentMethod: "card",
-      date: new Date(),
-      cost: 20,
-    },
-    {
-      id: "2",
-      itemName: "Fried Rice",
-      quantity: 3,
-      amount: 75,
-      paymentMethod: "cash",
-      date: new Date(),
-      cost: 25,
-    },
-    {
-      id: "3",
-      itemName: "Sinigang",
-      quantity: 1,
-      amount: 30,
-      paymentMethod: "gcash",
-      date: new Date(),
-      cost: 15,
-    },
-  ]);
+  // Transaction data will be loaded from API
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [paymentMethods, setPaymentMethods] = useState({
     bank_transfer: false,
     card: false,
@@ -102,7 +75,58 @@ function Admin() {
     newName: string;
   } | null>(null);
 
-  const handleLogout = () => {
+  // Load data from API on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      // Load categories and products from API
+      const [categoriesRes, productsRes, inventoryRes, salesRes] = await Promise.all([
+        categoryAPI.getAll(),
+        productAPI.getAll(),
+        inventoryAPI.getAll(),
+        salesAPI.getToday(),
+      ]);
+
+      if (categoriesRes.success) {
+        setCategories(categoriesRes.data);
+      }
+
+      if (productsRes.success) {
+        setItems(productsRes.data);
+      }
+
+      if (inventoryRes.success) {
+        setInventory(inventoryRes.data);
+      }
+
+      if (salesRes.success) {
+        // Convert sales data to transaction format
+        const txns = salesRes.data.sales?.map((sale: any) => ({
+          id: sale.id,
+          itemName: sale.saleItems?.[0]?.name || "Sale",
+          quantity: sale.saleItems?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0,
+          amount: sale.total,
+          paymentMethod: sale.payments?.[0]?.method || "unknown",
+          date: new Date(sale.created_at),
+          cost: sale.saleItems?.reduce((sum: number, item: any) => sum + item.cost, 0) || 0,
+        })) || [];
+        setTransactions(txns);
+      }
+    } catch (error) {
+      console.error("Failed to load data:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+    clearAuthToken();
     navigate("/");
   };
 
@@ -110,41 +134,46 @@ function Admin() {
     setPaymentMethods({ ...paymentMethods, [method]: !paymentMethods[method] });
   };
 
-  const addCategory = () => {
+  const addCategory = async () => {
     if (newCategory.trim()) {
-      const category: FoodCategory = {
-        id: Date.now().toString(),
-        name: newCategory,
-      };
-      setCategories([...categories, category]);
-      setNewCategory("");
+      try {
+        const response = await categoryAPI.create({ name: newCategory });
+        if (response.success) {
+          setCategories([...categories, response.data]);
+          setNewCategory("");
+        }
+      } catch (error) {
+        console.error("Failed to add category:", error);
+      }
     }
   };
 
-  const confirmDeleteCategory = (id: string) => {
+  const confirmDeleteCategory = async (id: string | number) => {
     setDeleteConfirmId(null);
-    setCategories(categories.filter((cat) => cat.id !== id));
-    // Also remove items from this category
-    setItems(items.filter((item) => item.category !== categories.find((c) => c.id === id)?.name));
+    try {
+      await categoryAPI.delete(Number(id));
+      setCategories(categories.filter((cat) => cat.id !== id));
+      // Also remove items from this category
+      setItems(items.filter((item) => item.category_id !== id));
+    } catch (error) {
+      console.error("Failed to delete category:", error);
+    }
   };
 
-  const confirmEditCategory = (newName: string) => {
+  const confirmEditCategory = async (newName: string) => {
     if (editConfirmData && newName.trim()) {
-      // Update all items with old category name to new category name
-      setItems(
-        items.map((item) =>
-          item.category === editConfirmData.oldName
-            ? { ...item, category: newName }
-            : item
-        )
-      );
-      // Update the category name
-      setCategories(
-        categories.map((cat) =>
-          cat.id === editConfirmData.id ? { ...cat, name: newName } : cat
-        )
-      );
-      setEditConfirmData(null);
+      try {
+        await categoryAPI.update(Number(editConfirmData.id), { name: newName });
+        // Update the category name
+        setCategories(
+          categories.map((cat) =>
+            cat.id === editConfirmData.id ? { ...cat, name: newName } : cat
+          )
+        );
+        setEditConfirmData(null);
+      } catch (error) {
+        console.error("Failed to update category:", error);
+      }
     }
   };
 
