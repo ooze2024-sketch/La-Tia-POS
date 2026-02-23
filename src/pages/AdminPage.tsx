@@ -95,7 +95,18 @@ function Admin() {
       }
 
       if (productsRes.success) {
-        setItems(productsRes.data);
+        // Normalize product shape from API: ensure `category` is the category name (string)
+        const normalized = productsRes.data.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          category_id: p.category_id,
+          category: p.category?.name ?? (typeof p.category === 'string' ? p.category : ''),
+          cost: typeof p.cost === 'string' ? parseFloat(p.cost) : p.cost,
+          price: typeof p.price === 'string' ? parseFloat(p.price) : p.price,
+          description: p.description ?? '',
+        }));
+
+        setItems(normalized);
       }
 
       if (inventoryRes.success) {
@@ -198,19 +209,46 @@ function Admin() {
     }
   };
 
-  const saveInlineItem = (categoryName: string) => {
+  const saveInlineItem = async (categoryName: string) => {
     if (inlineItemForm.name.trim() && inlineItemForm.cost && inlineItemForm.price) {
-      const item: FoodItem = {
-        id: Date.now().toString(),
-        name: inlineItemForm.name,
-        category: categoryName,
-        cost: parseFloat(inlineItemForm.cost),
-        price: parseFloat(inlineItemForm.price),
-        description: "",
-      };
-      setItems([...items, item]);
-      setInlineItemForm({ name: "", cost: "", price: "" });
-      setEditingCategoryId(null);
+      try {
+        // find category id from current categories
+        const categoryObj = categories.find((c) => c.name === categoryName);
+        if (!categoryObj) {
+          console.error('Category not found for', categoryName);
+          return;
+        }
+
+        const payload = {
+          name: inlineItemForm.name,
+          category_id: Number(categoryObj.id),
+          cost: parseFloat(inlineItemForm.cost),
+          price: parseFloat(inlineItemForm.price),
+          description: "",
+        };
+
+        const res: any = await productAPI.create(payload);
+        // API returns created product in res.data
+        if (res && res.success) {
+          const p = res.data;
+          const normalized: FoodItem = {
+            id: p.id,
+            name: p.name,
+            category_id: p.category_id,
+            category: categoryObj.name,
+            cost: typeof p.cost === 'string' ? parseFloat(p.cost) : p.cost,
+            price: typeof p.price === 'string' ? parseFloat(p.price) : p.price,
+            description: p.description ?? '',
+          };
+          setItems([...items, normalized]);
+          setInlineItemForm({ name: "", cost: "", price: "" });
+          setEditingCategoryId(null);
+        } else {
+          console.error('Failed to create product', res);
+        }
+      } catch (error) {
+        console.error('Error saving item:', error);
+      }
     }
   };
 
@@ -659,42 +697,51 @@ function Admin() {
                     <div key={category.id} className="category-section">
                       <div className="category-header">
                         <h3>{category.name}</h3>
-                        <div className="header-columns">
-                          <span>Cost</span>
-                          <span>Price</span>
-                        </div>
-                        <div className="category-actions">
-                          <button
-                            onClick={() =>
-                              setEditConfirmData({
-                                id: category.id,
-                                oldName: category.name,
-                                newName: category.name,
-                              })
-                            }
-                            className="category-edit-btn"
-                            title="Edit category"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmId(category.id)}
-                            className="category-delete-action-btn"
-                            title="Delete category"
-                          >
-                            🗑️
-                          </button>
-                          <button
-                            onClick={() => setEditingCategoryId(category.id)}
-                            className="category-add-item-btn"
-                            title="Add item"
-                          >
-                            +
-                          </button>
+                        <div className="header-right">
+                          <div className="header-columns">
+                            <span>Cost</span>
+                            <span>Price</span>
+                          </div>
+                          <div className="category-actions">
+                            <button
+                              onClick={() =>
+                                setEditConfirmData({
+                                  id: category.id,
+                                  oldName: category.name,
+                                  newName: category.name,
+                                })
+                              }
+                              className="category-edit-btn"
+                              title="Edit category"
+                            >
+                              <svg className="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" fill="#fff"/>
+                                <path d="M20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" fill="#fff"/>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(category.id)}
+                              className="category-delete-action-btn"
+                              title="Delete category"
+                            >
+                              <svg className="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M9 3v1H4v2h16V4h-5V3H9z" fill="#fff"/>
+                                <path d="M6 7v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zm3 3h2v8H9V10zm4 0h2v8h-2V10z" fill="#fff"/>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => setEditingCategoryId(String(category.id))}
+                              className="category-add-item-btn"
+                              title="Add item"
+                              aria-label={`Add item to ${category.name}`}
+                            >
+                              <span className="add-plus-icon" aria-hidden="true">+</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div className="items-in-category">
-                        {editingCategoryId === category.id && (
+                        {editingCategoryId === String(category.id) && (
                           <div className="inline-item-form">
                             <input
                               type="text"
@@ -749,11 +796,16 @@ function Admin() {
                                 readOnly
                               />
                               <button
-                                onClick={() => deleteItem(item.id)}
-                                className="item-delete-btn"
-                              >
-                                🗑
-                              </button>
+                                  onClick={() => deleteItem(item.id)}
+                                  className="item-delete-btn"
+                                  title={`Delete ${item.name}`}
+                                  aria-label={`Delete ${item.name}`}
+                                >
+                                  <svg className="icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M9 3v1H4v2h16V4h-5V3H9z" fill="currentColor"/>
+                                    <path d="M6 7v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zm3 3h2v8H9V10zm4 0h2v8h-2V10z" fill="currentColor"/>
+                                  </svg>
+                                </button>
                             </div>
                           ))}
                       </div>

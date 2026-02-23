@@ -259,7 +259,7 @@
 
 .category-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   background: linear-gradient(135deg, #d4a574 0%, #c8935a 100%);
   color: white;
@@ -278,7 +278,8 @@
   gap: 40px;
   font-size: 13px;
   font-weight: 600;
-  margin: 0 20px;
+  margin: 0 12px 0 20px;
+  white-space: nowrap;
 }
 
 .header-columns span {
@@ -290,6 +291,13 @@
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .category-edit-btn,
@@ -313,6 +321,125 @@
 .category-add-item-btn:hover {
   background-color: rgba(255, 255, 255, 0.2);
   transform: scale(1.15);
+}
+
+/* SVG icon sizing and color */
+.icon-svg {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+/* ensure svg paths use white color in header buttons */
+.category-header .icon-svg path {
+  fill: #ffffff;
+}
+
+/* ensure item row svgs inherit color */
+.category-item-row .icon-svg { color: #bdbdbd; }
+.category-item-row .item-delete-btn .icon-svg path { fill: currentColor; }
+
+/* tighten spacing in header icons group */
+.category-actions button + button { margin-left: 6px; }
+
+/* Tidy header action buttons (pencil / trash) to match add button */
+.category-edit-btn,
+.category-delete-action-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  margin-left: 6px;
+  background: rgba(255,255,255,0.08);
+  color: #ffffff;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.category-edit-btn:hover,
+.category-delete-action-btn:hover {
+  background: rgba(255,255,255,0.22);
+  transform: scale(1.08);
+}
+
+/* Make item cost/price inputs and delete icon align better */
+.item-cost-input,
+.item-price-input {
+  color: #333;
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid #c0c0c0;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: right;
+  background-color: white;
+  cursor: text;
+  box-sizing: border-box;
+}
+
+.item-price-input {
+  margin-right: 10px;
+}
+
+.item-delete-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #bdbdbd;
+  transition: all 0.15s ease;
+  border-radius: 6px;
+}
+
+.item-delete-btn:hover {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.06);
+  transform: scale(1.05);
+}
+
+/* Make the add (+) button more visible and consistently sized */
+.category-add-item-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 6px;
+  background-color: #7ec86d; /* green */
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.category-add-item-btn:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+/* stronger visible style for the add icon */
+.category-add-item-btn {
+  background-color: #7ec86d; /* green */
+  color: #ffffff;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  z-index: 3;
+}
+
+.add-plus-icon {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-block;
+  transform: translateY(-1px);
 }
 
 .category-delete-btn {
@@ -739,6 +866,60 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Strong overrides to ensure header/action and item controls look consistent */
+.categories-grid .category-section .category-header {
+  padding-right: 80px !important;
+}
+.categories-grid .category-section .category-header .category-actions {
+  right: 14px !important;
+}
+.categories-grid .category-section .category-header .category-actions .category-add-item-btn,
+.categories-grid .category-section .category-header .category-actions .category-edit-btn,
+.categories-grid .category-section .category-header .category-actions .category-delete-action-btn {
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  background: rgba(255,255,255,0.06) !important;
+  color: #fff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+}
+.categories-grid .category-section .category-header .category-actions .category-add-item-btn {
+  background: #7ec86d !important;
+}
+
+.categories-grid .category-section .items-in-category .category-item-row .item-cost-input,
+.categories-grid .category-section .items-in-category .category-item-row .item-price-input {
+  width: 60px !important;
+  padding: 6px 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid #c0c0c0 !important;
+}
+
+.categories-grid .category-section .items-in-category .category-item-row .item-price-input {
+  margin-right: 10px !important;
+}
+
+.categories-grid .category-section .items-in-category .category-item-row .item-delete-btn {
+  width: 30px !important;
+  height: 30px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #bdbdbd !important;
+  background: transparent !important;
+  border-radius: 6px !important;
+}
+
+.categories-grid .category-section .items-in-category .category-item-row .item-delete-btn:hover {
+  color: #e74c3c !important;
+  background: rgba(231, 76, 60, 0.06) !important;
 }
 
 .modal-header {
