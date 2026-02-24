@@ -51,7 +51,7 @@ function Admin() {
     unit: "",
   });
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
   const [inlineItemForm, setInlineItemForm] = useState({
     name: "",
     cost: "",
@@ -68,9 +68,9 @@ function Admin() {
     grab: false,
     maya: false,
   });
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [editConfirmData, setEditConfirmData] = useState<{
-    id: string;
+    id: number;
     oldName: string;
     newName: string;
   } | null>(null);
@@ -159,10 +159,10 @@ function Admin() {
     }
   };
 
-  const confirmDeleteCategory = async (id: string | number) => {
+  const confirmDeleteCategory = async (id: number) => {
     setDeleteConfirmId(null);
     try {
-      await categoryAPI.delete(Number(id));
+      await categoryAPI.delete(id);
       setCategories(categories.filter((cat) => cat.id !== id));
       // Also remove items from this category
       setItems(items.filter((item) => item.category_id !== id));
@@ -174,7 +174,7 @@ function Admin() {
   const confirmEditCategory = async (newName: string) => {
     if (editConfirmData && newName.trim()) {
       try {
-        await categoryAPI.update(Number(editConfirmData.id), { name: newName });
+        await categoryAPI.update(editConfirmData.id, { name: newName });
         // Update the category name
         setCategories(
           categories.map((cat) =>
@@ -188,7 +188,7 @@ function Admin() {
     }
   };
 
-  const deleteItem = (id: string) => {
+  const deleteItem = (id: number) => {
     setItems(items.filter((item) => item.id !== id));
   };
 
@@ -199,7 +199,7 @@ function Admin() {
       newInventoryItem.unit.trim()
     ) {
       const item: InventoryItem = {
-        id: Date.now().toString(),
+        id: Date.now(),
         name: newInventoryItem.name,
         quantity: parseFloat(newInventoryItem.quantity),
         unit: newInventoryItem.unit,
@@ -741,7 +741,7 @@ function Admin() {
                         </div>
                       </div>
                       <div className="items-in-category">
-                        {editingCategoryId === String(category.id) && (
+                        {editingCategoryId === category.id && (
                           <div className="inline-item-form">
                             <input
                               type="text"
