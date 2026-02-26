@@ -176,6 +176,14 @@
   margin-bottom: 30px;
 }
 
+/* inline error message below inputs */
+.input-error {
+  color: #e74c3c;
+  font-size: 13px;
+  margin-top: 4px;
+  margin-left: 4px;
+}
+
 .category-form input {
   flex: 1;
   padding: 12px 14px;
@@ -246,8 +254,9 @@
 
 .categories-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
   gap: 20px;
+  width: 100%;
 }
 
 .category-section {
@@ -403,7 +412,29 @@
   transform: scale(1.05);
 }
 
-/* Make the add (+) button more visible and consistently sized */
+.item-edit-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #bdbdbd;
+  transition: all 0.15s ease;
+  border-radius: 6px;
+  margin-right: 8px;
+}
+
+.item-edit-btn:hover {
+  color: #3498db;
+  background: rgba(52, 152, 219, 0.06);
+  transform: scale(1.05);
+}
+
+
 .category-add-item-btn {
   width: 34px;
   height: 34px;
@@ -412,26 +443,26 @@
   font-weight: 700;
   line-height: 1;
   border-radius: 6px;
-  background-color: #7ec86d; /* green */
+  background-color: #7ec86d;
   color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 3;
 }
 
 .category-add-item-btn:hover {
-  background-color: rgba(255, 255, 255, 0.24);
+  background-color: #6ab857;
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* stronger visible style for the add icon */
-.category-add-item-btn {
-  background-color: #7ec86d; /* green */
-  color: #ffffff;
-  border: 1px solid rgba(0,0,0,0.06);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  z-index: 3;
+.category-add-item-btn:active {
+  transform: scale(0.98);
 }
 
 .add-plus-icon {
@@ -525,51 +556,123 @@
   transform: scale(1.2);
 }
 
+.item-edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #3498db;
+  padding: 4px 8px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.item-edit-btn:hover {
+  color: #2980b9;
+  transform: scale(1.2);
+}
+
 .inline-item-form {
   display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  gap: 12px;
+  flex-direction: column;
+  padding: 16px;
   background-color: #f8f7f5;
   border-bottom: 2px solid #e0d9cf;
+  gap: 16px;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.form-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.form-row.full-width {
+  width: 100%;
+}
+
+.form-group {
+  flex: 1;
+  min-width: 100px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #c0c0c0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #a68361;
+  box-shadow: 0 0 0 3px rgba(166, 131, 97, 0.1);
+}
+
+.form-input.full-width {
+  width: 100%;
 }
 
 .inline-item-form input {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid #c0c0c0;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
+  transition: all 0.2s ease;
 }
 
-.inline-item-form input:first-of-type {
-  flex: 1;
-  min-width: 150px;
-}
-
-.inline-item-form input:nth-of-type(2),
-.inline-item-form input:nth-of-type(3) {
-  width: 80px;
+.inline-item-form input:focus {
+  outline: none;
+  border-color: #a68361;
+  box-shadow: 0 0 0 3px rgba(166, 131, 97, 0.1);
 }
 
 .save-items-btn {
-  padding: 8px 16px;
-  background-color: #7ec86d;
+  padding: 10px 20px;
+  background-color: #d4925a;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  height: fit-content;
+  align-self: flex-end;
 }
 
-.save-items-btn:hover {
-  background-color: #6bb55a;
-  transform: translateY(-1px);
+.save-items-btn:hover:not(:disabled) {
+  background-color: #c0824f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.save-items-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .item-cost-input,
@@ -922,6 +1025,27 @@
   background: rgba(231, 76, 60, 0.06) !important;
 }
 
+.categories-grid .category-section .items-in-category .category-item-row .item-edit-btn {
+  width: 30px !important;
+  height: 30px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #bdbdbd !important;
+  background: transparent !important;
+  border-radius: 6px !important;
+  margin-right: 8px !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.categories-grid .category-section .items-in-category .category-item-row .item-edit-btn:hover {
+  color: #3498db !important;
+  background: rgba(52, 152, 219, 0.06) !important;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -1145,20 +1269,29 @@
 }
 
 .add-ingredient-btn {
-  padding: 10px 20px;
+  padding: 10px 24px;
   background-color: #7ec86d;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, opacity 0.3s ease;
+  min-width: 140px;
+  text-align: center;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
-.add-ingredient-btn:hover {
+.add-ingredient-btn:hover:not(:disabled) {
   background-color: #6ab857;
+}
+
+.add-ingredient-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .inventory-table {
@@ -1770,4 +1903,260 @@
   body {
     background: white;
   }
+}
+
+/* Link Ingredients Styles */
+.link-ingredients-view {
+  width: 100%;
+}
+
+.ingredients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.ingredients-category-section {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e0d9cf;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ingredients-category-header {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #d4a574 0%, #c8935a 100%);
+  color: white;
+  padding: 16px 20px;
+}
+
+.ingredients-category-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.ingredients-items-list {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.ingredient-item-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0ebe5;
+  gap: 20px;
+}
+
+.ingredient-item-row:last-child {
+  border-bottom: none;
+}
+
+.ingredient-item-info {
+  min-width: 150px;
+  flex-shrink: 0;
+}
+
+.ingredient-item-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.ingredient-item-price {
+  color: #a68361;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ingredient-inventory-selector {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-mode-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.view-mode-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.inventory-selections {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.inventory-selection {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.inventory-selection-display {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f0ebe5;
+  border-radius: 6px;
+  align-items: center;
+}
+
+.ingredient-name {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+  font-size: 13px;
+}
+
+.ingredient-qty {
+  color: #666;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.inventory-select {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #c0c0c0;
+  border-radius: 6px;
+  font-size: 13px;
+  background-color: white;
+  color: #333;
+  cursor: text;
+  transition: all 0.2s ease;
+}
+
+.inventory-select:focus {
+  outline: none;
+  border-color: #a68361;
+  box-shadow: 0 0 0 3px rgba(166, 131, 97, 0.1);
+}
+
+.quantity-input {
+  width: 80px;
+  padding: 10px 12px;
+  border: 1px solid #c0c0c0;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.quantity-input:focus {
+  outline: none;
+  border-color: #a68361;
+  box-shadow: 0 0 0 3px rgba(166, 131, 97, 0.1);
+}
+
+.remove-ingredient-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.remove-ingredient-btn:hover {
+  background: rgba(231, 76, 60, 0.1);
+  transform: scale(1.05);
+}
+
+.ingredient-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* small circular plus button used in ingredient editing, not the inventory form */
+.ingredient-actions .add-ingredient-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: #7ec86d;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ingredient-actions .add-ingredient-btn:hover {
+  background: #6ab857;
+  transform: scale(1.05);
+}
+
+.save-ingredients-btn {
+  padding: 8px 16px;
+  background-color: #d4925a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.save-ingredients-btn:hover {
+  background-color: #c0824f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.edit-ingredients-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: #3498db;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.edit-ingredients-btn:hover {
+  background: #2980b9;
+  transform: scale(1.05);
 }

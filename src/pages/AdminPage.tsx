@@ -44,6 +44,14 @@ function Admin() {
   const [categories, setCategories] = useState<FoodCategory[]>([]);
   const [items, setItems] = useState<FoodItem[]>([]);
   const [newCategory, setNewCategory] = useState("");
+  const [isAddingCategory, setIsAddingCategory] = useState(false); // prevent spam clicking
+  // derived state to check for duplicates
+  const isCategoryDuplicate: boolean = Boolean(
+    newCategory.trim() &&
+      categories.some(
+        (c) => c.name.trim().toLowerCase() === newCategory.trim().toLowerCase()
+      )
+  );
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [newInventoryItem, setNewInventoryItem] = useState({
     name: "",
@@ -74,6 +82,21 @@ function Admin() {
     oldName: string;
     newName: string;
   } | null>(null);
+  const [isSavingItem, setIsSavingItem] = useState(false);
+  const [isSavingInventory, setIsSavingInventory] = useState(false);
+  const [itemDeleteConfirmId, setItemDeleteConfirmId] = useState<number | null>(null);
+  const [deleteConfirmItemName, setDeleteConfirmItemName] = useState<string>("");
+  const [editingItemData, setEditingItemData] = useState<{
+    id: number;
+    name: string;
+    cost: number;
+    price: number;
+  } | null>(null);
+  const [itemIngredients, setItemIngredients] = useState<{
+    [key: number]: Array<{ inventoryItemId: number; quantity: number }>;
+  }>({});
+  const [editingIngredientItemId, setEditingIngredientItemId] = useState<number | null>(null);
+  const [tempIngredients, setTempIngredients] = useState<Array<{ inventoryItemId: number; quantity: number }>>([]);
 
   // Load data from API on component mount
   useEffect(() => {
@@ -94,19 +117,29 @@ function Admin() {
         setCategories(categoriesRes.data);
       }
 
+      let normalizedItems: FoodItem[] = [];
       if (productsRes.success) {
         // Normalize product shape from API: ensure `category` is the category name (string)
-        const normalized = productsRes.data.map((p: any) => ({
+        normalizedItems = productsRes.data.map((p: any) => ({
           id: p.id,
           name: p.name,
-          category_id: p.category_id,
+          // make sure category_id is a number (API may return string)
+          category_id: Number(p.category_id),
           category: p.category?.name ?? (typeof p.category === 'string' ? p.category : ''),
           cost: typeof p.cost === 'string' ? parseFloat(p.cost) : p.cost,
           price: typeof p.price === 'string' ? parseFloat(p.price) : p.price,
           description: p.description ?? '',
         }));
 
-        setItems(normalized);
+        // Clean up orphaned items (items without a category) before setting
+        const orphanedItems = normalizedItems.filter((item) => !item.category || !item.category.trim());
+        if (orphanedItems.length > 0) {
+          await deleteOrphanedItems(orphanedItems);
+          // Remove orphaned items from the normalized list
+          normalizedItems = normalizedItems.filter((item) => item.category && item.category.trim());
+        }
+
+        setItems(normalizedItems);
       }
 
       if (inventoryRes.success) {
@@ -146,16 +179,29 @@ function Admin() {
   };
 
   const addCategory = async () => {
-    if (newCategory.trim()) {
-      try {
-        const response = await categoryAPI.create({ name: newCategory });
-        if (response.success) {
-          setCategories([...categories, response.data]);
-          setNewCategory("");
-        }
-      } catch (error) {
-        console.error("Failed to add category:", error);
+    const name = newCategory.trim();
+    if (!name || isAddingCategory) return;
+
+    // prevent duplicated category names (case-insensitive)
+    const exists = categories.some(
+      (c) => c.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (exists) {
+      alert("Category already exists");
+      return;
+    }
+
+    setIsAddingCategory(true);
+    try {
+      const response = await categoryAPI.create({ name });
+      if (response.success) {
+        setCategories([...categories, response.data]);
+        setNewCategory("");
       }
+    } catch (error) {
+      console.error("Failed to add category:", error);
+    } finally {
+      setIsAddingCategory(false);
     }
   };
 
@@ -164,8 +210,10 @@ function Admin() {
     try {
       await categoryAPI.delete(id);
       setCategories(categories.filter((cat) => cat.id !== id));
-      // Also remove items from this category
-      setItems(items.filter((item) => item.category_id !== id));
+      // Also remove items from this category (ensure numeric comparison)
+      setItems(
+        items.filter((item) => Number(item.category_id) !== id)
+      );
     } catch (error) {
       console.error("Failed to delete category:", error);
     }
@@ -189,33 +237,153 @@ function Admin() {
   };
 
   const deleteItem = (id: number) => {
-    setItems(items.filter((item) => item.id !== id));
+    const item = items.find((item) => item.id === id);
+    if (item) {
+      setItemDeleteConfirmId(id);
+      setDeleteConfirmItemName(item.name);
+    }
   };
 
-  const addInventoryItem = () => {
+  const confirmDeleteItem = async (id: number) => {
+    try {
+      const res: any = await productAPI.delete(id);
+      if (res && res.success) {
+        setItems(items.filter((item) => item.id !== id));
+        setItemDeleteConfirmId(null);
+        setDeleteConfirmItemName("");
+      } else {
+        console.error('Failed to delete item:', res);
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
+  };
+
+  const deleteOrphanedItems = async (itemsToDelete: FoodItem[]) => {
+    for (const item of itemsToDelete) {
+      try {
+        await productAPI.delete(item.id);
+      } catch (error) {
+        console.error(`Failed to delete orphaned item ${item.id}:`, error);
+      }
+    }
+  };
+
+  const editItemStart = (item: FoodItem) => {
+    setEditingItemData({
+      id: item.id,
+      name: item.name,
+      cost: item.cost,
+      price: item.price,
+    });
+  };
+
+  const confirmEditItem = async () => {
+    if (!editingItemData) return;
+    if (!editingItemData.name.trim() || !editingItemData.cost || !editingItemData.price) {
+      return;
+    }
+    try {
+      const payload = {
+        name: editingItemData.name,
+        cost: parseFloat(String(editingItemData.cost)),
+        price: parseFloat(String(editingItemData.price)),
+      };
+      const res: any = await productAPI.update(editingItemData.id, payload);
+      if (res && res.success) {
+        setItems(
+          items.map((item) =>
+            item.id === editingItemData.id
+              ? {
+                  ...item,
+                  name: editingItemData.name,
+                  cost: editingItemData.cost,
+                  price: editingItemData.price,
+                }
+              : item
+          )
+        );
+        setEditingItemData(null);
+      } else {
+        console.error('Failed to update item:', res);
+      }
+    } catch (error) {
+      console.error('Error updating item:', error);
+    }
+  };
+
+  const startEditingIngredients = (itemId: number) => {
+    setEditingIngredientItemId(itemId);
+    setTempIngredients([...(itemIngredients[itemId] || [])]);
+  };
+
+  const saveItemIngredients = () => {
+    if (editingIngredientItemId !== null) {
+      setItemIngredients({ ...itemIngredients, [editingIngredientItemId]: tempIngredients });
+      setEditingIngredientItemId(null);
+      setTempIngredients([]);
+    }
+  };
+
+  const addInventoryItem = async () => {
     if (
-      newInventoryItem.name.trim() &&
-      newInventoryItem.quantity &&
-      newInventoryItem.unit.trim()
+      isSavingInventory ||
+      !newInventoryItem.name.trim() ||
+      !newInventoryItem.quantity ||
+      !newInventoryItem.unit.trim()
     ) {
-      const item: InventoryItem = {
-        id: Date.now(),
+      return;
+    }
+
+    setIsSavingInventory(true);
+    try {
+      const payload = {
         name: newInventoryItem.name,
         quantity: parseFloat(newInventoryItem.quantity),
         unit: newInventoryItem.unit,
       };
-      setInventory([...inventory, item]);
-      setNewInventoryItem({ name: "", quantity: "", unit: "" });
+      const res: any = await inventoryAPI.create(payload);
+      if (res && res.success) {
+        // Use the actual database-created item with real ID
+        setInventory([...inventory, res.data]);
+        setNewInventoryItem({ name: "", quantity: "", unit: "" });
+      } else {
+        console.error('Failed to create inventory item:', res);
+      }
+    } catch (error) {
+      console.error('Error saving inventory item:', error);
+    } finally {
+      setIsSavingInventory(false);
+    }
+  };
+
+  const deleteInventoryItem = async (id: number) => {
+    try {
+      const res: any = await inventoryAPI.delete(id);
+      if (res && res.success) {
+        setInventory(inventory.filter((item) => item.id !== id));
+      } else {
+        console.error('Failed to delete inventory item:', res);
+      }
+    } catch (error) {
+      console.error('Error deleting inventory item:', error);
     }
   };
 
   const saveInlineItem = async (categoryName: string) => {
+    // Prevent duplicate submissions
+    if (isSavingItem) {
+      return;
+    }
+
     if (inlineItemForm.name.trim() && inlineItemForm.cost && inlineItemForm.price) {
+      setIsSavingItem(true);
       try {
         // find category id from current categories
         const categoryObj = categories.find((c) => c.name === categoryName);
         if (!categoryObj) {
           console.error('Category not found for', categoryName);
+          setIsSavingItem(false);
           return;
         }
 
@@ -248,6 +416,8 @@ function Admin() {
         }
       } catch (error) {
         console.error('Error saving item:', error);
+      } finally {
+        setIsSavingItem(false);
       }
     }
   };
@@ -405,6 +575,9 @@ function Admin() {
     return inventory.filter((item) => item.quantity === 0);
   };
 
+  // Count only items with valid categories (to match what displays on items page)
+  const displayedItemsCount = items.filter((item) => item.category && item.category.trim()).length;
+
   // Export functions
   const exportDailyReportToCSV = () => {
     const today = new Date().toLocaleDateString();
@@ -555,7 +728,7 @@ function Admin() {
             </div>
             <div className="card">
               <h3>Products</h3>
-              <p className="card-value">{items.length}</p>
+              <p className="card-value">{displayedItemsCount}</p>
             </div>
           </div>
         )}
@@ -607,8 +780,13 @@ function Admin() {
                         setNewInventoryItem({ ...newInventoryItem, unit: e.target.value })
                       }
                     />
-                    <button onClick={addInventoryItem} className="add-ingredient-btn">
-                      ADD INGREDIENT
+                    <button
+                      onClick={addInventoryItem}
+                      className="add-ingredient-btn"
+                      disabled={isSavingInventory}
+                      title="Add new ingredient to inventory"
+                    >
+                      {isSavingInventory ? "ADDING..." : "ADD INGREDIENT"}
                     </button>
                   </div>
                 </div>
@@ -627,7 +805,14 @@ function Admin() {
                     {inventory.map((item) => (
                       <div key={item.id} className="table-row">
                         <div className="col-ingredient">
-                          <span className="delete-icon">🗑</span>
+                          <span
+                            className="delete-icon"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => deleteInventoryItem(item.id)}
+                            title="Delete ingredient"
+                          >
+                            🗑
+                          </span>
                           <span className="duplicate-icon">📋</span>
                           <span className="item-name">{item.name}</span>
                         </div>
@@ -642,6 +827,128 @@ function Admin() {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {inventoryView === "ingredients" && (
+              <div className="link-ingredients-view">
+                <div className="ingredients-grid">
+                  {categories.map((category) => (
+                    <div key={category.id} className="ingredients-category-section">
+                      <div className="ingredients-category-header">
+                        <h3>{category.name}</h3>
+                      </div>
+                      <div className="ingredients-items-list">
+                        {items
+                          .filter((item) => item.category === category.name)
+                          .map((item) => (
+                            <div key={item.id} className="ingredient-item-row">
+                              <div className="ingredient-item-info">
+                                <div className="ingredient-item-name">{item.name}</div>
+                                <div className="ingredient-item-price">₱{item.price.toFixed(2)}</div>
+                              </div>
+                              <div className="ingredient-inventory-selector">
+                                {editingIngredientItemId === item.id ? (
+                                  <div className="edit-mode-container">
+                                    <div className="inventory-selections">
+                                      {tempIngredients.map((ing, idx) => {
+                                        return (
+                                          <div key={idx} className="inventory-selection">
+                                            <input
+                                              type="text"
+                                              list={`inventory-list-${item.id}`}
+                                              value={inventory.find((inv) => inv.id === ing.inventoryItemId)?.name || ""}
+                                              onChange={(e) => {
+                                                const typedValue = e.target.value;
+                                                const invItem = inventory.find((inv) => inv.name === typedValue);
+                                                const newIngs = [...tempIngredients];
+                                                newIngs[idx].inventoryItemId = invItem?.id || 0;
+                                                setTempIngredients(newIngs);
+                                              }}
+                                              placeholder="Search or type ingredient..."
+                                              className="inventory-select"
+                                              autoComplete="off"
+                                            />
+                                            <datalist id={`inventory-list-${item.id}`}>
+                                              {inventory.map((inv) => (
+                                                <option key={inv.id} value={inv.name} />
+                                              ))}
+                                            </datalist>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              step="0.01"
+                                              value={ing.quantity === 0 ? "" : ing.quantity}
+                                              onChange={(e) => {
+                                                const newIngs = [...tempIngredients];
+                                                newIngs[idx].quantity = parseFloat(e.target.value) || 0;
+                                                setTempIngredients(newIngs);
+                                              }}
+                                              placeholder="0"
+                                              className="quantity-input"
+                                            />
+                                            <button
+                                              onClick={() => {
+                                                const newIngs = tempIngredients.filter((_, i) => i !== idx);
+                                                setTempIngredients(newIngs);
+                                              }}
+                                              className="remove-ingredient-btn"
+                                              title="Remove ingredient"
+                                            >
+                                              ×
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="ingredient-actions">
+                                      <button
+                                        onClick={() => {
+                                          const newIngs = [...tempIngredients, { inventoryItemId: 0, quantity: 0 }];
+                                          setTempIngredients(newIngs);
+                                        }}
+                                        className="add-ingredient-btn"
+                                        title="Add ingredient"
+                                      >
+                                        +
+                                      </button>
+                                      <button
+                                        onClick={saveItemIngredients}
+                                        className="save-ingredients-btn"
+                                      >
+                                        SAVE
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="view-mode-container">
+                                    <div className="inventory-selections">
+                                      {(itemIngredients[item.id] || []).map((ing, idx) => {
+                                        const invItem = inventory.find((inv) => inv.id === ing.inventoryItemId);
+                                        return (
+                                          <div key={idx} className="inventory-selection-display">
+                                            <span className="ingredient-name">{invItem?.name || "N/A"}</span>
+                                            <span className="ingredient-qty">{ing.quantity} {invItem?.unit}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    <button
+                                      onClick={() => startEditingIngredients(item.id)}
+                                      className="edit-ingredients-btn"
+                                      title="Edit ingredients"
+                                    >
+                                      ✎
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -687,9 +994,16 @@ function Admin() {
                     onChange={(e) => setNewCategory(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && addCategory()}
                   />
-                  <button onClick={addCategory} className="add-category-btn">
-                    ADD CATEGORY
+                  <button
+                    onClick={addCategory}
+                    className="add-category-btn"
+                    disabled={isCategoryDuplicate || isAddingCategory}
+                  >
+                    {isAddingCategory ? "ADDING..." : "ADD CATEGORY"}
                   </button>
+                  {isCategoryDuplicate && (
+                    <div className="input-error">Category already exists</div>
+                  )}
                 </div>
 
                 <div className="categories-grid">
@@ -730,7 +1044,11 @@ function Admin() {
                               </svg>
                             </button>
                             <button
-                              onClick={() => setEditingCategoryId(String(category.id))}
+                              onClick={() =>
+                                setEditingCategoryId(
+                                  editingCategoryId === category.id ? null : category.id
+                                )
+                              }
                               className="category-add-item-btn"
                               title="Add item"
                               aria-label={`Add item to ${category.name}`}
@@ -743,38 +1061,53 @@ function Admin() {
                       <div className="items-in-category">
                         {editingCategoryId === category.id && (
                           <div className="inline-item-form">
-                            <input
-                              type="text"
-                              placeholder="Item name"
-                              value={inlineItemForm.name}
-                              onChange={(e) =>
-                                setInlineItemForm({ ...inlineItemForm, name: e.target.value })
-                              }
-                            />
-                            <input
-                              type="number"
-                              placeholder="Cost"
-                              step="0.01"
-                              value={inlineItemForm.cost}
-                              onChange={(e) =>
-                                setInlineItemForm({ ...inlineItemForm, cost: e.target.value })
-                              }
-                            />
-                            <input
-                              type="number"
-                              placeholder="Price"
-                              step="0.01"
-                              value={inlineItemForm.price}
-                              onChange={(e) =>
-                                setInlineItemForm({ ...inlineItemForm, price: e.target.value })
-                              }
-                            />
-                            <button
-                              onClick={() => saveInlineItem(category.name)}
-                              className="save-items-btn"
-                            >
-                              SAVE ITEMS
-                            </button>
+                            <div className="form-header">
+                              <h4>Add New Item to {category.name}</h4>
+                            </div>
+                            <div className="form-row">
+                              <input
+                                type="text"
+                                placeholder="Item name"
+                                value={inlineItemForm.name}
+                                onChange={(e) =>
+                                  setInlineItemForm({ ...inlineItemForm, name: e.target.value })
+                                }
+                                className="form-input full-width"
+                              />
+                            </div>
+                            <div className="form-row">
+                              <div className="form-group">
+                                <input
+                                  type="number"
+                                  placeholder="Cost"
+                                  step="0.01"
+                                  value={inlineItemForm.cost}
+                                  onChange={(e) =>
+                                    setInlineItemForm({ ...inlineItemForm, cost: e.target.value })
+                                  }
+                                  className="form-input"
+                                />
+                              </div>
+                              <div className="form-group">
+                                <input
+                                  type="number"
+                                  placeholder="Price"
+                                  step="0.01"
+                                  value={inlineItemForm.price}
+                                  onChange={(e) =>
+                                    setInlineItemForm({ ...inlineItemForm, price: e.target.value })
+                                  }
+                                  className="form-input"
+                                />
+                              </div>
+                              <button
+                                onClick={() => saveInlineItem(category.name)}
+                                className="save-items-btn"
+                                disabled={isSavingItem}
+                              >
+                                {isSavingItem ? 'SAVING...' : 'SAVE ITEMS'}
+                              </button>
+                            </div>
                           </div>
                         )}
                         {items
@@ -795,6 +1128,17 @@ function Admin() {
                                 value={item.price}
                                 readOnly
                               />
+                              <button
+                                  onClick={() => editItemStart(item)}
+                                  className="item-edit-btn"
+                                  title={`Edit ${item.name}`}
+                                  aria-label={`Edit ${item.name}`}
+                                >
+                                  <svg className="icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" fill="currentColor"/>
+                                    <path d="M20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" fill="currentColor"/>
+                                  </svg>
+                                </button>
                               <button
                                   onClick={() => deleteItem(item.id)}
                                   className="item-delete-btn"
@@ -1220,6 +1564,90 @@ function Admin() {
                     className="confirm-btn"
                   >
                     Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Item Delete Confirmation Modal */}
+        {itemDeleteConfirmId && (
+          <div className="modal-backdrop">
+            <div className="modal-container">
+              <div className="confirmation-modal">
+                <h2>Delete Item?</h2>
+                <p className="confirmation-text">
+                  Are you sure you want to delete <strong>{deleteConfirmItemName}</strong>?
+                </p>
+                <div className="modal-buttons">
+                  <button
+                    onClick={() => setItemDeleteConfirmId(null)}
+                    className="cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => confirmDeleteItem(itemDeleteConfirmId)}
+                    className="confirm-delete-btn"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Item Edit Confirmation Modal */}
+        {editingItemData && (
+          <div className="modal-backdrop">
+            <div className="modal-container">
+              <div className="confirmation-modal">
+                <h2>Edit Item</h2>
+                <p className="confirmation-text">Update item details:</p>
+                <input
+                  type="text"
+                  value={editingItemData.name}
+                  onChange={(e) =>
+                    setEditingItemData({ ...editingItemData, name: e.target.value })
+                  }
+                  className="edit-input"
+                  placeholder="Item name"
+                  autoFocus
+                />
+                <input
+                  type="number"
+                  value={editingItemData.cost}
+                  onChange={(e) =>
+                    setEditingItemData({ ...editingItemData, cost: parseFloat(e.target.value) || 0 })
+                  }
+                  className="edit-input"
+                  placeholder="Cost"
+                  step="0.01"
+                />
+                <input
+                  type="number"
+                  value={editingItemData.price}
+                  onChange={(e) =>
+                    setEditingItemData({ ...editingItemData, price: parseFloat(e.target.value) || 0 })
+                  }
+                  className="edit-input"
+                  placeholder="Price"
+                  step="0.01"
+                />
+                <div className="modal-buttons">
+                  <button
+                    onClick={() => setEditingItemData(null)}
+                    className="cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => confirmEditItem()}
+                    className="confirm-btn"
+                  >
+                    Save Changes
                   </button>
                 </div>
               </div>

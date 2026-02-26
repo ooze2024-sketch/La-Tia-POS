@@ -1,7 +1,8 @@
 // API Service for LaT ia POS
 // Handles all HTTP communication with Laravel backend
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+// use relative path so Vite proxy can handle cross‑origin during development
+const API_BASE_URL = '/api/v1';
 
 // Get token from localStorage
 const getToken = () => localStorage.getItem('auth_token');

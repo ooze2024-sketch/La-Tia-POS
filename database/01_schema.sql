@@ -70,7 +70,7 @@ CREATE TABLE products (
   is_active TINYINT(1) DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
   INDEX idx_products_name (name),
   INDEX idx_products_sku (sku),
   INDEX idx_products_category_id (category_id)
