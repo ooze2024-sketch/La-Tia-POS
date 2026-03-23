@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { authService } from "../services";
 import "./LoginPage.css";
 
-function App() {
+function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -23,7 +24,6 @@ function App() {
       const response = await authService.login(username, password);
       
       if (response.success) {
-        // Navigate to admin page
         navigate("/admin");
       } else {
         setError(response.message || "Login failed");
@@ -38,7 +38,7 @@ function App() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !loading) {
       handleLogin();
     }
   };
@@ -46,35 +46,59 @@ function App() {
   return (
     <div className="bg">
       <div className="login-card">
-
+        {/* Header with brand and subtitle */}
         <div className="header">
           <h1>La Tia Fanny</h1>
           <p>Point of Sale System</p>
         </div>
 
+        {/* Login form body */}
         <div className="body">
-          {error && <div style={{ color: 'red', marginBottom: '10px', fontSize: '14px' }}>{error}</div>}
+          {error && <div className="error-message">{error}</div>}
 
-          <label>Username</label>
-          <input
-            type="text"
-            placeholder="Enter your username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={loading}
-          />
+          {/* Username field */}
+          <div className="form-group">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
+              autoComplete="username"
+            />
+          </div>
 
-          <label>Password</label>
-          <input
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={loading}
-          />
+          {/* Password field with visibility toggle */}
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+          <div className="password-input-wrapper">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={loading}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "👁" : "⌣"}
+              </button>
+            </div>
+          </div>
 
+          {/* Login button */}
           <button 
             className="login-btn" 
             onClick={handleLogin}
@@ -84,10 +108,11 @@ function App() {
           </button>
         </div>
 
+        {/* Footer */}
         <div className="footer">
-          La Tia Fanny Restaurant Management System
+          La Tia Fanny Restaurant Management System • POS Version 3.2.1
           <br/>
-          POS Version 3.2.1 © 2026
+          © 2026
         </div>
 
       </div>
@@ -95,4 +120,4 @@ function App() {
   );
 }
 
-export default App;
+export default LoginPage;

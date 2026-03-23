@@ -1,138 +1,349 @@
+/* LoginPage.css */
+
 * {
   box-sizing: border-box;
 }
 
-body{
-  margin:0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
+/* ============================================================
+   Root styles
+   ============================================================ */
 
-.bg{
-  background: linear-gradient(135deg, #d8d0c2 0%, #c9bfb0 100%);
-  width: 100%;
+html {
   height: 100%;
-  min-height: 100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
 }
 
-.login-card{
-  width:400px;
-  background:white;
-  border-radius:20px;
-  overflow:hidden;
-  box-shadow:0 10px 40px rgba(0,0,0,0.1), 0 0 1px rgba(0,0,0,0.05);
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ============================================================
+   Background & Container
+   ============================================================ */
+
+.bg {
+  background: linear-gradient(135deg, #ede5d6 0%, #f5f0e8 100%);
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* ============================================================
+   Login Card
+   ============================================================ */
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.3s ease;
 }
 
 .login-card:hover {
-  box-shadow:0 15px 50px rgba(0,0,0,0.15), 0 0 1px rgba(0,0,0,0.05);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.06);
 }
 
-.header{
-  background: linear-gradient(135deg, #a68361 0%, #8b6a45 100%);
-  color:white;
-  text-align:center;
-  padding:40px 30px;
+/* ============================================================
+   Header with title and subtitle
+   ============================================================ */
+
+.header {
+  background: linear-gradient(135deg, #7d5941 0%, #6b4e35 100%);
+  color: #ffffff;
+  text-align: center;
+  padding: 48px 32px;
+  border-bottom: 8px solid #5c3f24;
 }
 
 .header h1 {
-  margin: 0 0 5px 0;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  margin: 0 0 8px 0;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  font-family: Georgia, "Garamond", serif;
+  line-height: 1.2;
 }
 
 .header p {
   margin: 0;
-  font-size: 14px;
-  opacity: 0.95;
-  font-weight: 300;
-  letter-spacing: 0.3px;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.4px;
+  opacity: 0.94;
 }
 
-.body{
-  padding:35px;
-  display:flex;
-  flex-direction:column;
-  gap:18px;
+/* ============================================================
+   Form body with improved spacing
+   ============================================================ */
+
+.body {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ============================================================
+   Form labels
+   ============================================================ */
 
 .body label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #5a4a3a;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b5647;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  letter-spacing: 0.6px;
   display: block;
 }
 
-input[type="text"],
-input[type="password"]{
-  padding:12px 16px;
-  border-radius:8px;
-  border: 2px solid #e0d9cf;
-  background-color: #fafbfb;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  font-family: inherit;
-  color: #333;
-}
+/* ============================================================
+   Form inputs (text & password)
+   ============================================================ */
 
-input[type="text"]:focus,
-input[type="password"]:focus {
-  outline: none;
-  border-color: #a68361;
-  background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(166, 131, 97, 0.1);
+input[type="text"],
+input[type="password"] {
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 2px solid #d9cfc5;
+  background-color: #fafaf9;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  color: #1a1a1a;
+  width: 100%;
 }
 
 input[type="text"]::placeholder,
 input[type="password"]::placeholder {
-  color: #c0b5a8;
+  color: #b8aea3;
 }
 
-.remember{
-  font-size:13px;
-  margin-top:5px;
-  color: #7a6a5a;
+/* Focus state with brown accent and glow */
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: #8b5f3f;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(139, 95, 63, 0.1), inset 0 0 0 1px rgba(139, 95, 63, 0.05);
 }
 
-.login-btn{
-  margin-top:10px;
-  background: linear-gradient(135deg, #9c7b53 0%, #8b6a45 100%);
-  color:white;
-  padding:14px;
-  border:none;
-  border-radius:8px;
-  font-size:15px;
-  font-weight: 600;
-  cursor:pointer;
-  transition: all 0.3s ease;
+/* Disabled state */
+input[type="text"]:disabled,
+input[type="password"]:disabled {
+  background-color: #f0ebe5;
+  color: #999999;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* ============================================================
+   Password input wrapper with toggle button
+   ============================================================ */
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper input[type="password"] {
+  padding-right: 48px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  font-size: 18px;
+  color: #a89a8e;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.password-toggle-btn:hover:not(:disabled) {
+  color: #7d5941;
+}
+
+.password-toggle-btn:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.94);
+}
+
+.password-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   Error message alert
+   ============================================================ */
+
+.error-message {
+  color: #c9514f;
+  font-size: 13px;
+  padding: 12px 14px;
+  background-color: #fce4e4;
+  border-radius: 6px;
+  border-left: 4px solid #c9514f;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+/* ============================================================
+   Login button with improved states
+   ============================================================ */
+
+.login-btn {
+  margin-top: 12px;
+  background: linear-gradient(135deg, #8b5f3f 0%, #7a5238 100%);
+  color: #ffffff;
+  padding: 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 12px rgba(139, 106, 69, 0.3);
+  letter-spacing: 0.6px;
+  box-shadow: 0 4px 12px rgba(139, 95, 63, 0.25);
+  width: 100%;
 }
 
-.login-btn:hover {
-  background: linear-gradient(135deg, #a68361 0%, #956f4f 100%);
+.login-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7a5238 0%, #6b4830 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(139, 106, 69, 0.4);
+  box-shadow: 0 6px 20px rgba(139, 95, 63, 0.35);
 }
 
-.login-btn:active {
+.login-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(139, 106, 69, 0.3);
+  box-shadow: 0 2px 8px rgba(139, 95, 63, 0.25);
 }
 
-.footer{
-  text-align:center;
-  font-size:11px;
-  padding:20px;
-  background:#f8f7f5;
-  color: #8a7a6a;
-  line-height: 1.6;
+.login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================
+   Footer section
+   ============================================================ */
+
+.footer {
+  text-align: center;
+  font-size: 11px;
+  padding: 24px 20px;
+  background: #faf9f7;
+  color: #8f8177;
+  line-height: 1.7;
   border-top: 1px solid #f0ebe5;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================================
+   Mobile responsiveness (tablets and smaller)
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .bg {
+    padding: 16px;
+  }
+
+  .login-card {
+    max-width: 90%;
+  }
+
+  .header {
+    padding: 36px 24px;
+  }
+
+  .header h1 {
+    font-size: 32px;
+    margin-bottom: 6px;
+  }
+
+  .header p {
+    font-size: 14px;
+  }
+
+  .body {
+    padding: 32px 24px;
+    gap: 24px;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    padding: 14px 14px;
+    font-size: 16px;
+  }
+
+  .login-btn {
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .footer {
+    padding: 20px 16px;
+    font-size: 10px;
+  }
+}
+
+/* ============================================================
+   Accessibility: Focus visible styles
+   ============================================================ */
+
+input[type="text"]:focus-visible,
+input[type="password"]:focus-visible,
+.login-btn:focus-visible {
+  outline: 2px solid #8b5f3f;
+  outline-offset: 2px;
+}
+
+.password-toggle-btn:focus-visible {
+  outline: none;
+}
+
+/* ============================================================
+   Reduced motion for accessibility
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .login-card,
+  input[type="text"],
+  input[type="password"],
+  .login-btn,
+  .password-toggle-btn {
+    transition: none;
+  }
 }
