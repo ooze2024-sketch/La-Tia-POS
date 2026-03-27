@@ -113,10 +113,32 @@ function Admin() {
   const [tempIngredients, setTempIngredients] = useState<Array<{ inventoryItemId: number; quantity: number; confirmed?: boolean }>>([]);
   const [uploadingImageItemId, setUploadingImageItemId] = useState<number | null>(null);
   const [dragOverItemId, setDragOverItemId] = useState<number | null>(null);
+  const [ingredientSearchState, setIngredientSearchState] = useState<{
+    [key: string]: { searchText: string; isOpen: boolean };
+  }>({});
 
   // Load data from API on component mount
   useEffect(() => {
     loadData();
+  }, []);
+
+  // Close ingredient dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.ingredient-autocomplete-container')) {
+        setIngredientSearchState((prev) => {
+          const newState = { ...prev };
+          Object.keys(newState).forEach((key) => {
+            newState[key] = { ...newState[key], isOpen: false };
+          });
+          return newState;
+        });
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const loadData = async () => {
@@ -984,27 +1006,82 @@ function Admin() {
                                               transition: "all 0.3s ease",
                                             }}
                                           >
-                                            <input
-                                              type="text"
-                                              list={`inventory-list-${item.id}`}
-                                              value={inventory.find((inv) => inv.id === ing.inventoryItemId)?.name || ""}
-                                              onChange={(e) => {
-                                                const typedValue = e.target.value;
-                                                const invItem = inventory.find((inv) => inv.name === typedValue);
-                                                const newIngs = [...tempIngredients];
-                                                newIngs[idx].inventoryItemId = invItem?.id || 0;
-                                                setTempIngredients(newIngs);
-                                              }}
-                                              placeholder="Search or type ingredient..."
-                                              className="inventory-select"
-                                              autoComplete="off"
-                                              disabled={ing.confirmed}
-                                            />
-                                            <datalist id={`inventory-list-${item.id}`}>
-                                              {inventory.map((inv) => (
-                                                <option key={inv.id} value={inv.name} />
-                                              ))}
-                                            </datalist>
+                                            <div className="ingredient-autocomplete-container">
+                                              <input
+                                                type="text"
+                                                value={inventory.find((inv) => inv.id === ing.inventoryItemId)?.name || ingredientSearchState[`${item.id}-${idx}`]?.searchText || ""}
+                                                onChange={(e) => {
+                                                  const searchText = e.target.value;
+                                                  setIngredientSearchState({
+                                                    ...ingredientSearchState,
+                                                    [`${item.id}-${idx}`]: { 
+                                                      searchText: searchText, 
+                                                      isOpen: true 
+                                                    }
+                                                  });
+                                                  
+                                                  // Auto-select if exact match
+                                                  const exactMatch = inventory.find((inv) => inv.name.toLowerCase() === searchText.toLowerCase());
+                                                  if (exactMatch) {
+                                                    const newIngs = [...tempIngredients];
+                                                    newIngs[idx].inventoryItemId = exactMatch.id;
+                                                    setTempIngredients(newIngs);
+                                                  }
+                                                }}
+                                                onFocus={() => {
+                                                  setIngredientSearchState({
+                                                    ...ingredientSearchState,
+                                                    [`${item.id}-${idx}`]: { 
+                                                      ...ingredientSearchState[`${item.id}-${idx}`], 
+                                                      isOpen: true 
+                                                    }
+                                                  });
+                                                }}
+                                                placeholder="Search or type ingredient..."
+                                                className="inventory-select"
+                                                autoComplete="off"
+                                                disabled={ing.confirmed}
+                                              />
+                                              {ingredientSearchState[`${item.id}-${idx}`]?.isOpen && !ing.confirmed && (
+                                                <div className="ingredient-dropdown">
+                                                  {inventory
+                                                    .filter((inv) => 
+                                                      inv.name.toLowerCase().includes(
+                                                        (ingredientSearchState[`${item.id}-${idx}`]?.searchText || "").toLowerCase()
+                                                      )
+                                                    )
+                                                    .map((inv) => (
+                                                      <div
+                                                        key={inv.id}
+                                                        className="ingredient-option"
+                                                        onClick={() => {
+                                                          const newIngs = [...tempIngredients];
+                                                          newIngs[idx].inventoryItemId = inv.id;
+                                                          setTempIngredients(newIngs);
+                                                          setIngredientSearchState({
+                                                            ...ingredientSearchState,
+                                                            [`${item.id}-${idx}`]: { 
+                                                              searchText: "", 
+                                                              isOpen: false 
+                                                            }
+                                                          });
+                                                        }}
+                                                      >
+                                                        {inv.name}
+                                                      </div>
+                                                    ))}
+                                                  {inventory.filter((inv) => 
+                                                    inv.name.toLowerCase().includes(
+                                                      (ingredientSearchState[`${item.id}-${idx}`]?.searchText || "").toLowerCase()
+                                                    )
+                                                  ).length === 0 && (
+                                                    <div className="ingredient-option-empty">
+                                                      No ingredients found
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
                                             <input
                                               type="number"
                                               min="0"

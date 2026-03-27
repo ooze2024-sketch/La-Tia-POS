@@ -992,10 +992,30 @@
 
 /* Strong overrides to ensure header/action and item controls look consistent */
 .categories-grid .category-section .category-header {
-  padding-right: 80px !important;
+  padding-right: 16px !important;
 }
+.categories-grid .category-section .category-header .header-right {
+  margin-left: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 14px !important;
+}
+
+.categories-grid .category-section .category-header .header-columns {
+  display: grid !important;
+  grid-template-columns: 60px 60px !important;
+  column-gap: 12px !important;
+  margin: 0 !important;
+}
+
+.categories-grid .category-section .category-header .header-columns span {
+  min-width: 60px !important;
+  text-align: right !important;
+}
+
 .categories-grid .category-section .category-header .category-actions {
-  right: 14px !important;
+  margin-left: 0 !important;
 }
 .categories-grid .category-section .category-header .category-actions .category-add-item-btn,
 .categories-grid .category-section .category-header .category-actions .category-edit-btn,
@@ -1024,7 +1044,7 @@
 }
 
 .categories-grid .category-section .items-in-category .category-item-row .item-price-input {
-  margin-right: 10px !important;
+  margin-right: 0 !important;
 }
 
 .categories-grid .category-section .items-in-category .category-item-row .item-delete-btn {
@@ -2185,4 +2205,51 @@
   font-size: 13px;
   margin-top: 4px;
   margin-left: 4px;
+}
+
+/* Autocomplete Dropdown Styles */
+.ingredient-autocomplete-container {
+  flex: 1;
+  position: relative;
+}
+
+.ingredient-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #c0c0c0;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ingredient-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f0ebe5;
+}
+
+.ingredient-option:last-child {
+  border-bottom: none;
+}
+
+.ingredient-option:hover {
+  background-color: #f5f1eb;
+  padding-left: 16px;
+}
+
+.ingredient-option-empty {
+  padding: 12px;
+  color: #999;
+  font-size: 13px;
+  text-align: center;
+  font-style: italic;
 }
