@@ -10,6 +10,7 @@ export interface Product {
   price: number;
   description?: string;
   is_active?: boolean;
+  image_path?: string;
   created_at?: string;
   updated_at?: string;
 }

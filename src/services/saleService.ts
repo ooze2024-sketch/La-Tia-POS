@@ -13,7 +13,7 @@ export interface SaleItem {
 export interface Sale {
   id: number;
   public_reference: string;
-  user_id: number;
+  user_id?: number | null;
   customer_id?: number;
   subtotal: number;
   discount?: number;
@@ -29,7 +29,7 @@ export interface Sale {
 }
 
 export interface CreateSaleRequest {
-  user_id: number;
+  user_id?: number;
   customer_id?: number;
   subtotal: number;
   discount?: number;
@@ -56,7 +56,7 @@ const saleService = {
 
   getSalesByDateRange: async (startDate: string, endDate: string): Promise<Sale[]> => {
     const response = await apiClient.get('/sales/date-range', {
-      params: { startDate, endDate },
+      params: { start_date: startDate, end_date: endDate },
     });
     return response.data.data || [];
   },

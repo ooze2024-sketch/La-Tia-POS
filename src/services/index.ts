@@ -14,5 +14,8 @@ export * from './productService';
 export * from './inventoryService';
 export * from './saleService';
 export * from './dashboardService';
-export * from './ingredientsService';
+export type {
+	LinkIngredientsRequest,
+	ProductIngredient as LinkedIngredient,
+} from './ingredientsService';
 export * from './productImageService';

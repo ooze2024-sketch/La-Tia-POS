@@ -5,6 +5,8 @@ import {
   productService,
   inventoryService,
   authService,
+  saleService,
+  apiClient,
 } from "../services";
 import { productImageService } from "../services/productImageService";
 import "./AdminPage.css";
@@ -40,6 +42,21 @@ interface Transaction {
   paymentMethod: string;
   date: Date;
   cost: number;
+}
+
+interface SaleRecord {
+  id: number;
+  total: number;
+  created_at?: string;
+  payments?: Array<{ method?: string }>;
+  saleItems?: Array<{
+    id?: number;
+    name: string;
+    quantity: number;
+    unit_price?: number;
+    line_total?: number;
+    cost?: number;
+  }>;
 }
 
 function Admin() {
@@ -81,6 +98,8 @@ function Admin() {
   });
   // Transaction data will be loaded from API
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [salesRecords, setSalesRecords] = useState<SaleRecord[]>([]);
+  const [catalogVersion, setCatalogVersion] = useState(0);
   const [paymentMethods, setPaymentMethods] = useState({
     bank_transfer: false,
     card: false,
@@ -117,29 +136,53 @@ function Admin() {
     [key: string]: { searchText: string; isOpen: boolean };
   }>({});
 
-  // Load data from API on component mount
-  useEffect(() => {
-    loadData();
-  }, []);
+  const getCatalogVersion = async (): Promise<number | null> => {
+    try {
+      const response = await apiClient.get('/sync/version');
+      const version = Number(response.data?.data?.catalog_version);
+      return Number.isFinite(version) ? version : null;
+    } catch (error) {
+      console.error('Failed to fetch catalog version:', error);
+      return null;
+    }
+  };
 
-  // Close ingredient dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.ingredient-autocomplete-container')) {
-        setIngredientSearchState((prev) => {
-          const newState = { ...prev };
-          Object.keys(newState).forEach((key) => {
-            newState[key] = { ...newState[key], isOpen: false };
-          });
-          return newState;
-        });
-      }
-    };
+  const loadSalesData = async () => {
+    try {
+      const salesData = (await saleService.getAll()) as SaleRecord[];
+      setSalesRecords(salesData);
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+      const mappedTransactions: Transaction[] = salesData.map((sale) => {
+        const totalQuantity = (sale.saleItems || []).reduce(
+          (sum, item) => sum + Number(item.quantity || 0),
+          0
+        );
+
+        const totalCost = (sale.saleItems || []).reduce(
+          (sum, item) => sum + Number(item.cost || 0) * Number(item.quantity || 0),
+          0
+        );
+
+        return {
+          id: String(sale.id),
+          itemName: (sale.saleItems || []).map((item) => item.name).join(', ') || 'Order',
+          quantity: totalQuantity,
+          amount: Number(sale.total || 0),
+          paymentMethod: sale.payments?.[0]?.method || 'cash',
+          date: sale.created_at ? new Date(sale.created_at) : new Date(),
+          cost: totalCost,
+        };
+      });
+
+      setTransactions(
+        mappedTransactions.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      );
+    } catch (error) {
+      console.error('Failed to load sales data:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -174,6 +217,15 @@ function Admin() {
 
       // Load ingredients for all products from backend
       await loadProductIngredients(mappedItems);
+
+      // Load sales records
+      await loadSalesData();
+
+      // Bootstrap current catalog version for polling
+      const version = await getCatalogVersion();
+      if (version !== null) {
+        setCatalogVersion(version);
+      }
     } catch (error) {
       console.error("Failed to load data:", error);
       // If unauthorized, redirect to login
@@ -182,6 +234,56 @@ function Admin() {
       }
     }
   };
+
+  // Load data from API on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Poll updates so cashier/admin changes appear quickly without manual reload
+  useEffect(() => {
+    const intervalId = window.setInterval(async () => {
+      if (!authService.isAuthenticated()) {
+        return;
+      }
+
+      const latestVersion = await getCatalogVersion();
+      if (latestVersion !== null && latestVersion !== catalogVersion) {
+        setCatalogVersion(latestVersion);
+        await loadData();
+        return;
+      }
+
+      await loadSalesData();
+      try {
+        const inventoryData = await inventoryService.getAll();
+        setInventory(inventoryData);
+      } catch (error) {
+        console.error('Failed to refresh inventory:', error);
+      }
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [catalogVersion]);
+
+  // Close ingredient dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.ingredient-autocomplete-container')) {
+        setIngredientSearchState((prev) => {
+          const newState = { ...prev };
+          Object.keys(newState).forEach((key) => {
+            newState[key] = { ...newState[key], isOpen: false };
+          });
+          return newState;
+        });
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const loadProductIngredients = async (products: FoodItem[]) => {
     const ingredientsMap: { [key: number]: Array<{ inventoryItemId: number; quantity: number }> } = {};
@@ -313,17 +415,6 @@ function Admin() {
     } catch (error: any) {
       console.error('Error deleting item:', error);
       alert(error.response?.data?.message || "Failed to delete item");
-    }
-  };
-
-  const deleteOrphanedItems = async (itemsToDelete: FoodItem[]) => {
-    // Delete orphaned items (products without categories) via API
-    try {
-      for (const item of itemsToDelete) {
-        await productService.delete(item.id);
-      }
-    } catch (error) {
-      console.error("Error deleting orphaned items:", error);
     }
   };
 
@@ -619,13 +710,15 @@ function Admin() {
   };
 
   const getBestSellingItem = () => {
-    const itemCounts = transactions.reduce(
-      (acc, t) => {
-        acc[t.itemName] = (acc[t.itemName] || 0) + t.quantity;
+    const itemCounts = salesRecords
+      .flatMap((sale) => sale.saleItems || [])
+      .reduce((acc, item) => {
+        const key = item.name || 'Unknown';
+        const quantity = Number(item.quantity || 0);
+        acc[key] = (acc[key] || 0) + quantity;
         return acc;
-      },
-      {} as Record<string, number>
-    );
+      }, {} as Record<string, number>);
+
     const bestItem = Object.entries(itemCounts).sort(([, a], [, b]) => b - a)[0];
     return bestItem ? { name: bestItem[0], quantity: bestItem[1] } : null;
   };
@@ -690,17 +783,17 @@ function Admin() {
   };
 
   const getMostProfitableItem = () => {
-    const itemProfit = items.reduce(
-      (acc, item) => {
-        const profitPerUnit = item.price - item.cost;
-        const unitsSold = transactions
-          .filter((t) => t.itemName === item.name)
-          .reduce((sum, t) => sum + t.quantity, 0);
-        acc[item.name] = profitPerUnit * unitsSold;
+    const itemProfit = salesRecords
+      .flatMap((sale) => sale.saleItems || [])
+      .reduce((acc, item) => {
+        const name = item.name || 'Unknown';
+        const quantity = Number(item.quantity || 0);
+        const unitPrice = Number(item.unit_price || 0);
+        const unitCost = Number(item.cost || 0);
+        acc[name] = (acc[name] || 0) + (unitPrice - unitCost) * quantity;
         return acc;
-      },
-      {} as Record<string, number>
-    );
+      }, {} as Record<string, number>);
+
     const mostProfitable = Object.entries(itemProfit).sort(([, a], [, b]) => b - a)[0];
     return mostProfitable ? { name: mostProfitable[0], profit: mostProfitable[1] } : null;
   };
@@ -715,6 +808,11 @@ function Admin() {
 
   // Count only items with valid categories (to match what displays on items page)
   const displayedItemsCount = items.filter((item) => item.category && item.category.trim()).length;
+  const totalOrderCount = salesRecords.length;
+  const totalRevenueAmount = salesRecords.reduce(
+    (sum, sale) => sum + Number(sale.total || 0),
+    0
+  );
 
   // Export functions
   const exportDailyReportToCSV = () => {
@@ -855,11 +953,11 @@ function Admin() {
           <div className="dashboard-cards">
             <div className="card">
               <h3>Orders</h3>
-              <p className="card-value">0</p>
+              <p className="card-value">{totalOrderCount}</p>
             </div>
             <div className="card">
               <h3>Revenue</h3>
-              <p className="card-value">₱0.00</p>
+              <p className="card-value">₱{totalRevenueAmount.toFixed(2)}</p>
             </div>
             <div className="card">
               <h3>Customers</h3>
