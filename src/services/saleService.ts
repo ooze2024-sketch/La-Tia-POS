@@ -38,6 +38,18 @@ export interface CreateSaleRequest {
   items: SaleItem[];
 }
 
+export interface DailySalesSummary {
+  total_revenue: number;
+  total_transactions: number;
+  total_items: number;
+  date: string;
+}
+
+export interface DailySalesResponse {
+  sales: Sale[];
+  summary: DailySalesSummary;
+}
+
 const saleService = {
   getAll: async (): Promise<Sale[]> => {
     const response = await apiClient.get('/sales');
@@ -61,9 +73,18 @@ const saleService = {
     return response.data.data || [];
   },
 
-  getDailySales: async (): Promise<Sale[]> => {
+  getDailySales: async (): Promise<DailySalesResponse> => {
     const response = await apiClient.get('/sales/daily/today');
-    return response.data.data || [];
+    const data = response.data?.data || {};
+    return {
+      sales: Array.isArray(data.sales) ? data.sales : [],
+      summary: {
+        total_revenue: Number(data.summary?.total_revenue || 0),
+        total_transactions: Number(data.summary?.total_transactions || 0),
+        total_items: Number(data.summary?.total_items || 0),
+        date: String(data.summary?.date || ''),
+      },
+    };
   },
 
   recordPayment: async (

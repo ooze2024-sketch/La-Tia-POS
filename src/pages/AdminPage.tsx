@@ -6,9 +6,7 @@ import {
   inventoryService,
   authService,
   saleService,
-  apiClient,
 } from "../services";
-import { productImageService } from "../services/productImageService";
 import "./AdminPage.css";
 
 interface FoodItem {
@@ -19,7 +17,6 @@ interface FoodItem {
   cost: number;
   price: number;
   description: string;
-  image_path?: string;
 }
 
 interface FoodCategory {
@@ -42,21 +39,6 @@ interface Transaction {
   paymentMethod: string;
   date: Date;
   cost: number;
-}
-
-interface SaleRecord {
-  id: number;
-  total: number;
-  created_at?: string;
-  payments?: Array<{ method?: string }>;
-  saleItems?: Array<{
-    id?: number;
-    name: string;
-    quantity: number;
-    unit_price?: number;
-    line_total?: number;
-    cost?: number;
-  }>;
 }
 
 function Admin() {
@@ -98,8 +80,6 @@ function Admin() {
   });
   // Transaction data will be loaded from API
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [salesRecords, setSalesRecords] = useState<SaleRecord[]>([]);
-  const [catalogVersion, setCatalogVersion] = useState(0);
   const [paymentMethods, setPaymentMethods] = useState({
     bank_transfer: false,
     card: false,
@@ -129,60 +109,71 @@ function Admin() {
     [key: number]: Array<{ inventoryItemId: number; quantity: number }>;
   }>({});
   const [editingIngredientItemId, setEditingIngredientItemId] = useState<number | null>(null);
-  const [tempIngredients, setTempIngredients] = useState<Array<{ inventoryItemId: number; quantity: number; confirmed?: boolean }>>([]);
-  const [uploadingImageItemId, setUploadingImageItemId] = useState<number | null>(null);
-  const [dragOverItemId, setDragOverItemId] = useState<number | null>(null);
-  const [ingredientSearchState, setIngredientSearchState] = useState<{
-    [key: string]: { searchText: string; isOpen: boolean };
-  }>({});
+  const [tempIngredients, setTempIngredients] = useState<Array<{ inventoryItemId: number; quantity: number }>>([]);
 
-  const getCatalogVersion = async (): Promise<number | null> => {
-    try {
-      const response = await apiClient.get('/sync/version');
-      const version = Number(response.data?.data?.catalog_version);
-      return Number.isFinite(version) ? version : null;
-    } catch (error) {
-      console.error('Failed to fetch catalog version:', error);
-      return null;
-    }
+  const toNumber = (value: unknown, fallback = 0): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const mapSalesToTransactions = (sales: any[]): Transaction[] => {
+    return sales.flatMap((sale: any) => {
+      const createdAt = sale?.created_at ? new Date(sale.created_at) : new Date();
+      const saleItems = Array.isArray(sale?.sale_items)
+        ? sale.sale_items
+        : Array.isArray(sale?.saleItems)
+          ? sale.saleItems
+          : [];
+
+      // Fallback for old/partial sale records that do not include line items.
+      if (saleItems.length === 0) {
+        return [
+          {
+            id: `sale-${sale?.id ?? Math.random()}`,
+            itemName: sale?.public_reference || "Sale",
+            quantity: 1,
+            amount: toNumber(sale?.total),
+            paymentMethod: sale?.payments?.[0]?.method || "cash",
+            date: createdAt,
+            cost: 0,
+          },
+        ];
+      }
+
+      return saleItems.map((item: any, index: number) => ({
+        id: `${sale?.id ?? "sale"}-${item?.id ?? index}`,
+        itemName: item?.name || "Unknown Item",
+        quantity: toNumber(item?.quantity, 1),
+        amount: toNumber(item?.line_total),
+        paymentMethod: sale?.payments?.[0]?.method || "cash",
+        date: createdAt,
+        cost: toNumber(item?.cost),
+      }));
+    });
   };
 
   const loadSalesData = async () => {
     try {
-      const salesData = (await saleService.getAll()) as SaleRecord[];
-      setSalesRecords(salesData);
-
-      const mappedTransactions: Transaction[] = salesData.map((sale) => {
-        const totalQuantity = (sale.saleItems || []).reduce(
-          (sum, item) => sum + Number(item.quantity || 0),
-          0
-        );
-
-        const totalCost = (sale.saleItems || []).reduce(
-          (sum, item) => sum + Number(item.cost || 0) * Number(item.quantity || 0),
-          0
-        );
-
-        return {
-          id: String(sale.id),
-          itemName: (sale.saleItems || []).map((item) => item.name).join(', ') || 'Order',
-          quantity: totalQuantity,
-          amount: Number(sale.total || 0),
-          paymentMethod: sale.payments?.[0]?.method || 'cash',
-          date: sale.created_at ? new Date(sale.created_at) : new Date(),
-          cost: totalCost,
-        };
-      });
-
-      setTransactions(
-        mappedTransactions.sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
-      );
+      const sales = await saleService.getAll();
+      setTransactions(mapSalesToTransactions(sales as any[]));
     } catch (error) {
-      console.error('Failed to load sales data:', error);
+      console.error("Failed to load sales data:", error);
+      setTransactions([]);
     }
   };
+
+  // Load data from API on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      loadSalesData();
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -207,7 +198,6 @@ function Admin() {
         cost: p.cost,
         price: p.price,
         description: p.description || "",
-        image_path: p.image_path || "",
       }));
       setItems(mappedItems);
 
@@ -215,17 +205,11 @@ function Admin() {
       const inventoryData = await inventoryService.getAll();
       setInventory(inventoryData);
 
-      // Load ingredients for all products from backend
-      await loadProductIngredients(mappedItems);
-
-      // Load sales records
+      // Load sales/transactions for reports and dashboard
       await loadSalesData();
 
-      // Bootstrap current catalog version for polling
-      const version = await getCatalogVersion();
-      if (version !== null) {
-        setCatalogVersion(version);
-      }
+      // Load ingredients for all products from backend
+      await loadProductIngredients(mappedItems);
     } catch (error) {
       console.error("Failed to load data:", error);
       // If unauthorized, redirect to login
@@ -235,80 +219,18 @@ function Admin() {
     }
   };
 
-  // Load data from API on component mount
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Poll updates so cashier/admin changes appear quickly without manual reload
-  useEffect(() => {
-    const intervalId = window.setInterval(async () => {
-      if (!authService.isAuthenticated()) {
-        return;
-      }
-
-      const latestVersion = await getCatalogVersion();
-      if (latestVersion !== null && latestVersion !== catalogVersion) {
-        setCatalogVersion(latestVersion);
-        await loadData();
-        return;
-      }
-
-      await loadSalesData();
-      try {
-        const inventoryData = await inventoryService.getAll();
-        setInventory(inventoryData);
-      } catch (error) {
-        console.error('Failed to refresh inventory:', error);
-      }
-    }, 3000);
-
-    return () => window.clearInterval(intervalId);
-  }, [catalogVersion]);
-
-  // Close ingredient dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.ingredient-autocomplete-container')) {
-        setIngredientSearchState((prev) => {
-          const newState = { ...prev };
-          Object.keys(newState).forEach((key) => {
-            newState[key] = { ...newState[key], isOpen: false };
-          });
-          return newState;
-        });
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
   const loadProductIngredients = async (products: FoodItem[]) => {
     const ingredientsMap: { [key: number]: Array<{ inventoryItemId: number; quantity: number }> } = {};
     
     try {
-      // Get all product IDs
-      const productIds = products.map(p => p.id);
-      
-      // Fetch ALL ingredients in a single batch request
-      const batchIngredients = await productService.getMultipleIngredients(productIds);
-      
-      // Convert the response format
-      Object.entries(batchIngredients).forEach(([productId, ingredients]: any) => {
-        ingredientsMap[parseInt(productId)] = ingredients.map((ing: any) => ({
+      // Load ingredients for each product
+      for (const product of products) {
+        const ingredients = await productService.getIngredients(product.id);
+        ingredientsMap[product.id] = ingredients.map(ing => ({
           inventoryItemId: ing.inventory_item_id,
           quantity: parseFloat(ing.quantity.toString()),
         }));
-      });
-      
-      // Initialize products without ingredients
-      products.forEach((product) => {
-        if (!ingredientsMap[product.id]) {
-          ingredientsMap[product.id] = [];
-        }
-      });
+      }
     } catch (error) {
       console.error("Failed to load product ingredients:", error);
       // Initialize with empty ingredients if fetch fails
@@ -500,70 +422,6 @@ function Admin() {
     }
   };
 
-  const handleImageUpload = async (itemId: number, file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('Please select a valid image file');
-      return;
-    }
-
-    setUploadingImageItemId(itemId);
-    try {
-      const result = await productImageService.uploadImage(itemId, file);
-      
-      // Update items state with new image path
-      setItems(
-        items.map((item) =>
-          item.id === itemId
-            ? { ...item, image_path: result.image_path }
-            : item
-        )
-      );
-      
-      alert('Image uploaded successfully!');
-    } catch (error: any) {
-      console.error('Error uploading image:', error);
-      alert(error.message || 'Failed to upload image');
-    } finally {
-      setUploadingImageItemId(null);
-    }
-  };
-
-  const handlePictureDrop = (e: React.DragEvent<HTMLDivElement>, itemId: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverItemId(null);
-
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      handleImageUpload(itemId, files[0]);
-    }
-  };
-
-  const handlePictureDragOver = (e: React.DragEvent<HTMLDivElement>, itemId: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverItemId(itemId);
-  };
-
-  const handlePictureDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverItemId(null);
-  };
-
-  const handlePictureClick = (itemId: number) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
-      if (file) {
-        handleImageUpload(itemId, file);
-      }
-    };
-    input.click();
-  };
-
   const addInventoryItem = async () => {
     if (
       isSavingInventory ||
@@ -637,7 +495,6 @@ function Admin() {
           cost: newProduct.cost,
           price: newProduct.price,
           description: newProduct.description || '',
-          image_path: newProduct.image_path || '',
         };
         setItems([...items, normalized]);
         setInlineItemForm({ name: "", cost: "", price: "" });
@@ -690,7 +547,7 @@ function Admin() {
         transDate.setHours(0, 0, 0, 0);
         return transDate.getTime() === today.getTime();
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
 
   const getMonthlyTotalTransactions = () => {
@@ -710,15 +567,13 @@ function Admin() {
   };
 
   const getBestSellingItem = () => {
-    const itemCounts = salesRecords
-      .flatMap((sale) => sale.saleItems || [])
-      .reduce((acc, item) => {
-        const key = item.name || 'Unknown';
-        const quantity = Number(item.quantity || 0);
-        acc[key] = (acc[key] || 0) + quantity;
+    const itemCounts = transactions.reduce(
+      (acc, t) => {
+        acc[t.itemName] = (acc[t.itemName] || 0) + t.quantity;
         return acc;
-      }, {} as Record<string, number>);
-
+      },
+      {} as Record<string, number>
+    );
     const bestItem = Object.entries(itemCounts).sort(([, a], [, b]) => b - a)[0];
     return bestItem ? { name: bestItem[0], quantity: bestItem[1] } : null;
   };
@@ -783,17 +638,17 @@ function Admin() {
   };
 
   const getMostProfitableItem = () => {
-    const itemProfit = salesRecords
-      .flatMap((sale) => sale.saleItems || [])
-      .reduce((acc, item) => {
-        const name = item.name || 'Unknown';
-        const quantity = Number(item.quantity || 0);
-        const unitPrice = Number(item.unit_price || 0);
-        const unitCost = Number(item.cost || 0);
-        acc[name] = (acc[name] || 0) + (unitPrice - unitCost) * quantity;
+    const itemProfit = items.reduce(
+      (acc, item) => {
+        const profitPerUnit = item.price - item.cost;
+        const unitsSold = transactions
+          .filter((t) => t.itemName === item.name)
+          .reduce((sum, t) => sum + t.quantity, 0);
+        acc[item.name] = profitPerUnit * unitsSold;
         return acc;
-      }, {} as Record<string, number>);
-
+      },
+      {} as Record<string, number>
+    );
     const mostProfitable = Object.entries(itemProfit).sort(([, a], [, b]) => b - a)[0];
     return mostProfitable ? { name: mostProfitable[0], profit: mostProfitable[1] } : null;
   };
@@ -808,11 +663,8 @@ function Admin() {
 
   // Count only items with valid categories (to match what displays on items page)
   const displayedItemsCount = items.filter((item) => item.category && item.category.trim()).length;
-  const totalOrderCount = salesRecords.length;
-  const totalRevenueAmount = salesRecords.reduce(
-    (sum, sale) => sum + Number(sale.total || 0),
-    0
-  );
+  const dashboardOrders = transactions.length;
+  const dashboardRevenue = transactions.reduce((sum, t) => sum + t.amount, 0);
 
   // Export functions
   const exportDailyReportToCSV = () => {
@@ -953,11 +805,11 @@ function Admin() {
           <div className="dashboard-cards">
             <div className="card">
               <h3>Orders</h3>
-              <p className="card-value">{totalOrderCount}</p>
+              <p className="card-value">{dashboardOrders}</p>
             </div>
             <div className="card">
               <h3>Revenue</h3>
-              <p className="card-value">₱{totalRevenueAmount.toFixed(2)}</p>
+              <p className="card-value">₱{dashboardRevenue.toFixed(2)}</p>
             </div>
             <div className="card">
               <h3>Customers</h3>
@@ -1095,91 +947,27 @@ function Admin() {
                                     <div className="inventory-selections">
                                       {tempIngredients.map((ing, idx) => {
                                         return (
-                                          <div 
-                                            key={idx} 
-                                            className="inventory-selection"
-                                            style={{
-                                              backgroundColor: ing.confirmed ? "#f0f0f0" : "transparent",
-                                              opacity: ing.confirmed ? 0.7 : 1,
-                                              transition: "all 0.3s ease",
-                                            }}
-                                          >
-                                            <div className="ingredient-autocomplete-container">
-                                              <input
-                                                type="text"
-                                                value={inventory.find((inv) => inv.id === ing.inventoryItemId)?.name || ingredientSearchState[`${item.id}-${idx}`]?.searchText || ""}
-                                                onChange={(e) => {
-                                                  const searchText = e.target.value;
-                                                  setIngredientSearchState({
-                                                    ...ingredientSearchState,
-                                                    [`${item.id}-${idx}`]: { 
-                                                      searchText: searchText, 
-                                                      isOpen: true 
-                                                    }
-                                                  });
-                                                  
-                                                  // Auto-select if exact match
-                                                  const exactMatch = inventory.find((inv) => inv.name.toLowerCase() === searchText.toLowerCase());
-                                                  if (exactMatch) {
-                                                    const newIngs = [...tempIngredients];
-                                                    newIngs[idx].inventoryItemId = exactMatch.id;
-                                                    setTempIngredients(newIngs);
-                                                  }
-                                                }}
-                                                onFocus={() => {
-                                                  setIngredientSearchState({
-                                                    ...ingredientSearchState,
-                                                    [`${item.id}-${idx}`]: { 
-                                                      ...ingredientSearchState[`${item.id}-${idx}`], 
-                                                      isOpen: true 
-                                                    }
-                                                  });
-                                                }}
-                                                placeholder="Search or type ingredient..."
-                                                className="inventory-select"
-                                                autoComplete="off"
-                                                disabled={ing.confirmed}
-                                              />
-                                              {ingredientSearchState[`${item.id}-${idx}`]?.isOpen && !ing.confirmed && (
-                                                <div className="ingredient-dropdown">
-                                                  {inventory
-                                                    .filter((inv) => 
-                                                      inv.name.toLowerCase().includes(
-                                                        (ingredientSearchState[`${item.id}-${idx}`]?.searchText || "").toLowerCase()
-                                                      )
-                                                    )
-                                                    .map((inv) => (
-                                                      <div
-                                                        key={inv.id}
-                                                        className="ingredient-option"
-                                                        onClick={() => {
-                                                          const newIngs = [...tempIngredients];
-                                                          newIngs[idx].inventoryItemId = inv.id;
-                                                          setTempIngredients(newIngs);
-                                                          setIngredientSearchState({
-                                                            ...ingredientSearchState,
-                                                            [`${item.id}-${idx}`]: { 
-                                                              searchText: "", 
-                                                              isOpen: false 
-                                                            }
-                                                          });
-                                                        }}
-                                                      >
-                                                        {inv.name}
-                                                      </div>
-                                                    ))}
-                                                  {inventory.filter((inv) => 
-                                                    inv.name.toLowerCase().includes(
-                                                      (ingredientSearchState[`${item.id}-${idx}`]?.searchText || "").toLowerCase()
-                                                    )
-                                                  ).length === 0 && (
-                                                    <div className="ingredient-option-empty">
-                                                      No ingredients found
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
+                                          <div key={idx} className="inventory-selection">
+                                            <input
+                                              type="text"
+                                              list={`inventory-list-${item.id}`}
+                                              value={inventory.find((inv) => inv.id === ing.inventoryItemId)?.name || ""}
+                                              onChange={(e) => {
+                                                const typedValue = e.target.value;
+                                                const invItem = inventory.find((inv) => inv.name === typedValue);
+                                                const newIngs = [...tempIngredients];
+                                                newIngs[idx].inventoryItemId = invItem?.id || 0;
+                                                setTempIngredients(newIngs);
+                                              }}
+                                              placeholder="Search or type ingredient..."
+                                              className="inventory-select"
+                                              autoComplete="off"
+                                            />
+                                            <datalist id={`inventory-list-${item.id}`}>
+                                              {inventory.map((inv) => (
+                                                <option key={inv.id} value={inv.name} />
+                                              ))}
+                                            </datalist>
                                             <input
                                               type="number"
                                               min="0"
@@ -1192,7 +980,6 @@ function Admin() {
                                               }}
                                               placeholder="0"
                                               className="quantity-input"
-                                              disabled={ing.confirmed}
                                             />
                                             <button
                                               onClick={() => {
@@ -1203,33 +990,6 @@ function Admin() {
                                               title="Remove ingredient"
                                             >
                                               ×
-                                            </button>
-                                            <button
-                                              onClick={() => {
-                                                // Confirm ingredient - validate that both fields are filled
-                                                if (ing.inventoryItemId && ing.quantity > 0) {
-                                                  const newIngs = [...tempIngredients];
-                                                  newIngs[idx].confirmed = !newIngs[idx].confirmed;
-                                                  setTempIngredients(newIngs);
-                                                } else {
-                                                  alert("Please fill in both ingredient name and quantity");
-                                                }
-                                              }}
-                                              className="confirm-ingredient-btn"
-                                              title={ing.confirmed ? "Unconfirm ingredient" : "Confirm ingredient"}
-                                              style={{
-                                                backgroundColor: ing.confirmed ? "#4CAF50" : "#ccc",
-                                                border: "none",
-                                                color: "white",
-                                                padding: "5px 10px",
-                                                borderRadius: "4px",
-                                                cursor: ing.inventoryItemId && ing.quantity > 0 ? "pointer" : "not-allowed",
-                                                fontSize: "16px",
-                                                marginLeft: "5px",
-                                              }}
-                                              disabled={!ing.inventoryItemId || ing.quantity <= 0}
-                                            >
-                                              ✓
                                             </button>
                                           </div>
                                         );
@@ -1446,30 +1206,7 @@ function Admin() {
                           .filter((item) => item.category === category.name)
                           .map((item) => (
                             <div key={item.id} className="category-item-row">
-                              <div
-                                className={`item-pic-placeholder ${dragOverItemId === item.id ? 'drag-over' : ''}`}
-                                onDragOver={(e) => handlePictureDragOver(e, item.id)}
-                                onDragLeave={handlePictureDragLeave}
-                                onDrop={(e) => handlePictureDrop(e, item.id)}
-                                onClick={() => handlePictureClick(item.id)}
-                                style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
-                              >
-                                {uploadingImageItemId === item.id ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '12px' }}>
-                                    Uploading...
-                                  </div>
-                                ) : item.image_path ? (
-                                  <img 
-                                    src={`http://localhost:8000/storage/${item.image_path}`}
-                                    alt={item.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  />
-                                ) : (
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                    Drop Picture Here
-                                  </div>
-                                )}
-                              </div>
+                              <div className="item-pic-placeholder">Drop Picture Here</div>
                               <div className="item-name">{item.name}</div>
                               <input
                                 type="number"
