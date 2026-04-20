@@ -80,6 +80,7 @@ function Admin() {
   });
   // Transaction data will be loaded from API
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [salesData, setSalesData] = useState<any[]>([]);
   const [paymentMethods, setPaymentMethods] = useState({
     bank_transfer: false,
     card: false,
@@ -116,48 +117,67 @@ function Admin() {
     return Number.isFinite(parsed) ? parsed : fallback;
   };
 
+  const getSaleItems = (sale: any): any[] => {
+    if (Array.isArray(sale?.sale_items)) {
+      return sale.sale_items;
+    }
+    if (Array.isArray(sale?.saleItems)) {
+      return sale.saleItems;
+    }
+    return [];
+  };
+
+  const getSalePayments = (sale: any): any[] => {
+    if (Array.isArray(sale?.payments)) {
+      return sale.payments;
+    }
+    if (Array.isArray(sale?.payment)) {
+      return sale.payment;
+    }
+    return [];
+  };
+
   const mapSalesToTransactions = (sales: any[]): Transaction[] => {
-    return sales.flatMap((sale: any) => {
+    return sales.map((sale: any) => {
       const createdAt = sale?.created_at ? new Date(sale.created_at) : new Date();
-      const saleItems = Array.isArray(sale?.sale_items)
-        ? sale.sale_items
-        : Array.isArray(sale?.saleItems)
-          ? sale.saleItems
-          : [];
+      const saleItems = getSaleItems(sale);
+      const paymentList = getSalePayments(sale);
 
-      // Fallback for old/partial sale records that do not include line items.
-      if (saleItems.length === 0) {
-        return [
-          {
-            id: `sale-${sale?.id ?? Math.random()}`,
-            itemName: sale?.public_reference || "Sale",
-            quantity: 1,
-            amount: toNumber(sale?.total),
-            paymentMethod: sale?.payments?.[0]?.method || "cash",
-            date: createdAt,
-            cost: 0,
-          },
-        ];
-      }
+      const computedTotal = saleItems.reduce(
+        (sum: number, item: any) =>
+          sum + toNumber(item?.line_total, toNumber(item?.unit_price) * toNumber(item?.quantity, 0)),
+        0
+      );
+      const totalQuantity = saleItems.reduce(
+        (sum: number, item: any) => sum + toNumber(item?.quantity, 0),
+        0
+      );
+      const totalCost = saleItems.reduce(
+        (sum: number, item: any) =>
+          sum + toNumber(item?.cost, 0) * toNumber(item?.quantity, 0),
+        0
+      );
 
-      return saleItems.map((item: any, index: number) => ({
-        id: `${sale?.id ?? "sale"}-${item?.id ?? index}`,
-        itemName: item?.name || "Unknown Item",
-        quantity: toNumber(item?.quantity, 1),
-        amount: toNumber(item?.line_total),
-        paymentMethod: sale?.payments?.[0]?.method || "cash",
+      return {
+        id: `sale-${sale?.id ?? Math.random()}`,
+        itemName: sale?.public_reference || `Order #${sale?.id ?? "N/A"}`,
+        quantity: totalQuantity > 0 ? totalQuantity : 1,
+        amount: toNumber(sale?.total, computedTotal),
+        paymentMethod: paymentList?.[0]?.method || "cash",
         date: createdAt,
-        cost: toNumber(item?.cost),
-      }));
+        cost: totalCost,
+      };
     });
   };
 
   const loadSalesData = async () => {
     try {
       const sales = await saleService.getAll();
+      setSalesData(sales as any[]);
       setTransactions(mapSalesToTransactions(sales as any[]));
     } catch (error) {
       console.error("Failed to load sales data:", error);
+      setSalesData([]);
       setTransactions([]);
     }
   };
@@ -170,7 +190,7 @@ function Admin() {
   useEffect(() => {
     const timer = setInterval(() => {
       loadSalesData();
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(timer);
   }, []);
@@ -547,7 +567,7 @@ function Admin() {
         transDate.setHours(0, 0, 0, 0);
         return transDate.getTime() === today.getTime();
       })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
   const getMonthlyTotalTransactions = () => {
@@ -567,14 +587,18 @@ function Admin() {
   };
 
   const getBestSellingItem = () => {
-    const itemCounts = transactions.reduce(
-      (acc, t) => {
-        acc[t.itemName] = (acc[t.itemName] || 0) + t.quantity;
+    const itemCounts = salesData.reduce(
+      (acc, sale) => {
+        const saleItems = getSaleItems(sale);
+        saleItems.forEach((item: any) => {
+          const itemName = item?.name || "Unknown Item";
+          acc[itemName] = (acc[itemName] || 0) + toNumber(item?.quantity, 0);
+        });
         return acc;
       },
       {} as Record<string, number>
     );
-    const bestItem = Object.entries(itemCounts).sort(([, a], [, b]) => b - a)[0];
+    const bestItem = (Object.entries(itemCounts) as Array<[string, number]>).sort(([, a], [, b]) => b - a)[0];
     return bestItem ? { name: bestItem[0], quantity: bestItem[1] } : null;
   };
 
@@ -638,12 +662,19 @@ function Admin() {
   };
 
   const getMostProfitableItem = () => {
+    const unitsSoldByItem = salesData.reduce((acc, sale) => {
+      const saleItems = getSaleItems(sale);
+      saleItems.forEach((item: any) => {
+        const itemName = item?.name || "Unknown Item";
+        acc[itemName] = (acc[itemName] || 0) + toNumber(item?.quantity, 0);
+      });
+      return acc;
+    }, {} as Record<string, number>);
+
     const itemProfit = items.reduce(
       (acc, item) => {
         const profitPerUnit = item.price - item.cost;
-        const unitsSold = transactions
-          .filter((t) => t.itemName === item.name)
-          .reduce((sum, t) => sum + t.quantity, 0);
+        const unitsSold = unitsSoldByItem[item.name] || 0;
         acc[item.name] = profitPerUnit * unitsSold;
         return acc;
       },
@@ -1068,12 +1099,6 @@ function Admin() {
               >
                 TABLE VIEW
               </button>
-              <button
-                className={`tab-btn ${itemView === "modifiers" ? "active" : ""}`}
-                onClick={() => setItemView("modifiers")}
-              >
-                MODIFIERS
-              </button>
             </div>
 
             {itemView === "item" && (
@@ -1254,12 +1279,6 @@ function Admin() {
             {itemView === "table" && (
               <div className="items-view-content">
                 <p>Table View - Coming Soon</p>
-              </div>
-            )}
-
-            {itemView === "modifiers" && (
-              <div className="items-view-content">
-                <p>Modifiers - Coming Soon</p>
               </div>
             )}
           </div>
