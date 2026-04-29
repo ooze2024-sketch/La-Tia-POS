@@ -4,16 +4,15 @@ export const productImageService = {
   uploadImage: async (productId: number, file: File) => {
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      const dotIndex = file.name.lastIndexOf(".");
+      const baseName = dotIndex > 0 ? file.name.slice(0, dotIndex) : file.name;
+      const extension = dotIndex > 0 ? file.name.slice(dotIndex) : "";
+      const uniqueFilename = `${baseName}-${Date.now()}${extension}`;
+      formData.append('image', file, uniqueFilename);
 
       const response = await apiClient.post(
         `/products/${productId}/upload-image`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+        formData
       );
 
       return response.data.data;

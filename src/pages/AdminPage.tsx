@@ -15,9 +15,6 @@ import {
 import type {
   DailySalesSummary,
   Sale,
-  SaleActionRequest,
-  SaleActionRequestStatus,
-  SaleActionType,
 } from "../services/saleService";
 import type {
   InventoryDailySummary,
@@ -67,6 +64,7 @@ interface Transaction {
 
 type ReportDateField = "startDate" | "endDate";
 type ReportViewType = "daily" | "monthly";
+type DashboardQuickActionId = "add_item" | "daily_report";
 
 interface ReportRange {
   startDate: string;
@@ -147,6 +145,219 @@ const REPORT_CALENDAR_MONTHS = [
   "December",
 ];
 const REPORT_CALENDAR_YEARS = Array.from({ length: 101 }, (_, index) => 2000 + index);
+const DASHBOARD_HOURLY_BUCKETS = [8, 10, 12, 14, 16, 18, 20, 22];
+
+const SidebarBrandIcon = () => (
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+    <path
+      d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="m2.1 21.8 6.4-6.3"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="m19 5-7 7"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const DashboardIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="2" />
+    <rect x="13" y="3" width="8" height="5" rx="2" stroke="currentColor" strokeWidth="2" />
+    <rect x="13" y="10" width="8" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+    <rect x="3" y="13" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="2" />
+  </svg>
+);
+
+const ItemsIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <path d="M4 8h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z" stroke="currentColor" strokeWidth="2" />
+    <path d="M9 8V6a3 3 0 0 1 6 0v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const InventoryIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <path d="M3 8 12 3l9 5-9 5-9-5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M3 12l9 5 9-5M3 16l9 5 9-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const LinkIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <path
+      d="M10 14a4 4 0 0 1 0-6l2-2a4 4 0 1 1 5.7 5.6l-1 1"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M14 10a4 4 0 0 1 0 6l-2 2a4 4 0 1 1-5.7-5.6l1-1"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ReportsIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <path d="M4 20V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M8 20v-6M12 20V9M16 20v-4M20 20V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const ReceiptsIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <path
+      d="M7 3h10v18l-2-1.5L13 21l-2-1.5L9 21l-2-1.5L5 21V5a2 2 0 0 1 2-2Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const SyncIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <path d="M20 12a8 8 0 0 0-14.4-4.8M4 12a8 8 0 0 0 14.4 4.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M6 3v4h4M18 21v-4h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const SettingsIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <path
+      d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <path
+      d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 1 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 1 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 1 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2a2 2 0 1 1 0 4h-.2a1 1 0 0 0-.9.6Z"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const LogoutIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+    <path d="M14 7l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M19 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const ReceiptMiniIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+    <path
+      d="M7 3h10v18l-2-1.5L13 21l-2-1.5L9 21l-2-1.5L5 21V5a2 2 0 0 1 2-2Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <path d="M9 9h6M9 13h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const CoinIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+    <path d="M12 8v8M9.5 10.2h4.1a1.8 1.8 0 1 1 0 3.6H10.4a1.8 1.8 0 1 0 0 3.6h4.1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+    <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="2" />
+    <path d="M4.5 18a4.5 4.5 0 0 1 9 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="17" cy="10" r="2.3" stroke="currentColor" strokeWidth="2" />
+    <path d="M14.6 18a3.9 3.9 0 0 1 5.2 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const PackageMiniIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+    <path d="M3 8 12 3l9 5-9 5-9-5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M3 8v8l9 5 9-5V8M12 13v8" stroke="currentColor" strokeWidth="2" />
+  </svg>
+);
+
+const ReportMiniIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+    <path d="M4 20V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M9 20v-7M14 20V9M19 20v-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const AlertTriangleIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+    <path
+      d="M12 4.5 21 20H3l9-15.5Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+    <path d="M12 10v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="12" cy="17.2" r="1" fill="currentColor" />
+  </svg>
+);
+
+const HistoryIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true" focusable="false">
+    <path
+      d="M4 5v5h5M20 12a8 8 0 1 1-2.3-5.6L20 9"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M12 8.5V12l2.5 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true" focusable="false">
+    <path d="M9 3h6M4 7h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path
+      d="M7 7v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
 
 function Admin() {
   const navigate = useNavigate();
@@ -173,8 +384,6 @@ function Admin() {
     endDate: new Date(),
   });
   const [isApplyingReportDateFilter, setIsApplyingReportDateFilter] = useState(false);
-  const [returnsStatusFilter, setReturnsStatusFilter] = useState<SaleActionRequestStatus | "all">("requested");
-  const [returnsSearch, setReturnsSearch] = useState("");
   const [receiptFilters, setReceiptFilters] = useState({
     reference: "",
     startDate: "",
@@ -222,21 +431,6 @@ function Admin() {
   const [todayTransactions, setTodayTransactions] = useState<Transaction[]>([]);
   const [dailySalesSummary, setDailySalesSummary] = useState<DailySalesSummary | null>(null);
   const [salesForReturns, setSalesForReturns] = useState<Sale[]>([]);
-  const [returnsRequests, setReturnsRequests] = useState<SaleActionRequest[]>([]);
-  const [newActionRequest, setNewActionRequest] = useState<{
-    saleReference: string;
-    actionType: SaleActionType;
-    reason: string;
-    requestedAmount: string;
-  }>({
-    saleReference: "",
-    actionType: "refund",
-    reason: "",
-    requestedAmount: "",
-  });
-  const [isLoadingReturns, setIsLoadingReturns] = useState(false);
-  const [isSubmittingReturnRequest, setIsSubmittingReturnRequest] = useState(false);
-  const [isReviewingRequestId, setIsReviewingRequestId] = useState<number | null>(null);
   const [receiptSearchResults, setReceiptSearchResults] = useState<Sale[]>([]);
   const [selectedReceiptSale, setSelectedReceiptSale] = useState<Sale | null>(null);
   const [isLoadingReceipts, setIsLoadingReceipts] = useState(false);
@@ -273,6 +467,8 @@ function Admin() {
   const [isSavingInventory, setIsSavingInventory] = useState(false);
   const [itemDeleteConfirmId, setItemDeleteConfirmId] = useState<number | null>(null);
   const [deleteConfirmItemName, setDeleteConfirmItemName] = useState<string>("");
+  const [inventoryDeleteConfirmId, setInventoryDeleteConfirmId] = useState<number | null>(null);
+  const [inventoryDeleteConfirmName, setInventoryDeleteConfirmName] = useState<string>("");
   const [editingItemData, setEditingItemData] = useState<{
     id: number;
     name: string;
@@ -284,6 +480,11 @@ function Admin() {
   }>({});
   const [editingIngredientItemId, setEditingIngredientItemId] = useState<number | null>(null);
   const [tempIngredients, setTempIngredients] = useState<Array<{ inventoryItemId: number; quantity: number }>>([]);
+  const [isSavingIngredientLinks, setIsSavingIngredientLinks] = useState(false);
+  const [ingredientEditorFeedback, setIngredientEditorFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [inventoryDailySummaryMap, setInventoryDailySummaryMap] = useState<Record<number, InventoryDailySummary>>({});
   const [inventoryOpeningInputs, setInventoryOpeningInputs] = useState<Record<number, string>>({});
   const [inventoryHistoryByItemId, setInventoryHistoryByItemId] = useState<Record<number, StockMovement[]>>({});
@@ -350,8 +551,12 @@ function Admin() {
         candidates.map(async (item) => {
           loadingItemImageIdsRef.current.add(item.id);
           try {
-            const response = await apiClient.get(`/products/${item.id}/image`, {
+            const response = await apiClient.get(`/products/${item.id}/image?t=${Date.now()}`, {
               responseType: "blob",
+              headers: {
+                "Cache-Control": "no-cache",
+                Pragma: "no-cache",
+              },
             });
             if (cancelled) {
               return;
@@ -953,42 +1158,6 @@ function Admin() {
     }
   };
 
-  const refreshActionRequests = async () => {
-    setIsLoadingReturns(true);
-    try {
-      const requests = await saleService.getActionRequests();
-      setReturnsRequests(requests);
-    } catch (error) {
-      console.error("Failed to load return requests:", error);
-      setReturnsRequests([]);
-    } finally {
-      setIsLoadingReturns(false);
-    }
-  };
-
-  const getActionRequestErrorMessage = (error: unknown) => {
-    const statusCode =
-      typeof error === "object" &&
-      error !== null &&
-      "response" in error
-        ? (error as { response?: { status?: number; data?: { message?: string } } }).response
-            ?.status
-        : undefined;
-
-    if (statusCode === 404 || statusCode === 405) {
-      return "Returns approval endpoints are not available yet. Add backend action-request routes to enable refunds and void approval.";
-    }
-
-    const responseMessage =
-      typeof error === "object" &&
-      error !== null &&
-      "response" in error
-        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-        : undefined;
-
-    return responseMessage || "Failed to process returns request.";
-  };
-
   const getSyncErrorMessage = (error: any) => {
     const statusCode = error?.response?.status;
     if (statusCode === 404 || statusCode === 405) {
@@ -1120,9 +1289,8 @@ function Admin() {
       await loadProductIngredients(mappedItems);
       await loadPosSettings();
 
-      // Load sales and returns data for dashboard/reports and returns approval queue
+      // Load sales data for dashboard/reports/receipts
       await loadSalesData();
-      await refreshActionRequests();
     } catch (error) {
       console.error("Failed to load data:", error);
       // If unauthorized, redirect to login
@@ -1363,18 +1531,46 @@ function Admin() {
 
   const startEditingIngredients = (itemId: number) => {
     setEditingIngredientItemId(itemId);
-    setTempIngredients([...(itemIngredients[itemId] || [])]);
+    setIngredientEditorFeedback(null);
+    const existing = [...(itemIngredients[itemId] || [])];
+    setTempIngredients(existing.length > 0 ? existing : [{ inventoryItemId: 0, quantity: 0 }]);
+  };
+
+  const cancelEditingIngredients = () => {
+    setEditingIngredientItemId(null);
+    setTempIngredients([]);
+    setIngredientEditorFeedback(null);
   };
 
   const saveItemIngredients = async () => {
     if (editingIngredientItemId !== null) {
-      try {
-        // Filter out incomplete entries
-        const validIngredients = tempIngredients.filter(
-          ing => ing.inventoryItemId && ing.quantity > 0
-        );
+      setIngredientEditorFeedback(null);
+      const validIngredients = tempIngredients.filter(
+        (ing) => ing.inventoryItemId && ing.quantity > 0
+      );
+      const selectedIds = validIngredients.map((ing) => ing.inventoryItemId);
+      const duplicateIds = selectedIds.filter(
+        (id, index) => selectedIds.indexOf(id) !== index
+      );
 
-        // Save ingredients to backend
+      if (validIngredients.length === 0) {
+        setIngredientEditorFeedback({
+          type: "error",
+          text: "Add at least one valid ingredient with quantity greater than 0.",
+        });
+        return;
+      }
+
+      if (duplicateIds.length > 0) {
+        setIngredientEditorFeedback({
+          type: "error",
+          text: "Duplicate ingredients found. Keep only one row per ingredient.",
+        });
+        return;
+      }
+
+      setIsSavingIngredientLinks(true);
+      try {
         const ingredientsToSave = validIngredients.map(ing => ({
           inventory_item_id: ing.inventoryItemId,
           quantity: ing.quantity,
@@ -1390,12 +1586,18 @@ function Admin() {
         
         setEditingIngredientItemId(null);
         setTempIngredients([]);
-        
-        // Show success message
-        alert("Ingredients linked successfully!");
+        setIngredientEditorFeedback({
+          type: "success",
+          text: "Ingredients linked successfully.",
+        });
       } catch (error: any) {
         console.error("Error saving ingredients:", error);
-        alert(error.response?.data?.message || "Error saving ingredients");
+        setIngredientEditorFeedback({
+          type: "error",
+          text: error.response?.data?.message || "Error saving ingredients",
+        });
+      } finally {
+        setIsSavingIngredientLinks(false);
       }
     }
   };
@@ -1429,7 +1631,16 @@ function Admin() {
     }
   };
 
-  const deleteInventoryItem = async (id: number) => {
+  const requestDeleteInventoryItem = (id: number) => {
+    const target = inventory.find((item) => item.id === id);
+    if (!target) {
+      return;
+    }
+    setInventoryDeleteConfirmId(id);
+    setInventoryDeleteConfirmName(target.name);
+  };
+
+  const confirmDeleteInventoryItem = async (id: number) => {
     try {
       await inventoryService.delete(id);
       setInventory(inventory.filter((item) => item.id !== id));
@@ -1449,6 +1660,8 @@ function Admin() {
         delete next[id];
         return next;
       });
+      setInventoryDeleteConfirmId(null);
+      setInventoryDeleteConfirmName("");
     } catch (error: any) {
       console.error('Error deleting inventory item:', error);
       alert(error.response?.data?.message || "Failed to delete inventory item");
@@ -1592,113 +1805,33 @@ function Admin() {
     }
   };
 
-  const getSaleReferenceById = (saleId: number) => {
-    const sale = salesForReturns.find((row) => row.id === saleId);
-    return sale?.public_reference || `#${String(saleId).padStart(5, "0")}`;
-  };
-
-  const submitActionRequest = async () => {
-    if (isSubmittingReturnRequest) {
-      return;
-    }
-
-    const saleReference = newActionRequest.saleReference.trim();
-    const reason = newActionRequest.reason.trim();
-    if (!saleReference || !reason) {
-      alert("Sale reference and reason are required.");
-      return;
-    }
-
-    const matchedSale = salesForReturns.find(
-      (sale) => sale.public_reference.toLowerCase() === saleReference.toLowerCase()
-    );
-
-    if (!matchedSale) {
-      alert("Sale reference not found.");
-      return;
-    }
-
-    const parsedAmount = Number(newActionRequest.requestedAmount || 0);
-    if (newActionRequest.actionType === "refund") {
-      if (!newActionRequest.requestedAmount || parsedAmount <= 0) {
-        alert("Refund amount must be greater than 0.");
-        return;
-      }
-      if (parsedAmount > Number(matchedSale.total || 0)) {
-        alert("Refund amount cannot exceed sale total.");
-        return;
-      }
-    }
-
-    setIsSubmittingReturnRequest(true);
-    try {
-      await saleService.requestAction(matchedSale.id, {
-        action_type: newActionRequest.actionType,
-        reason,
-        requested_amount:
-          newActionRequest.actionType === "refund"
-            ? parsedAmount
-            : undefined,
-      });
-      alert("Request submitted for admin review.");
-      setNewActionRequest({
-        saleReference,
-        actionType: newActionRequest.actionType,
-        reason: "",
-        requestedAmount: "",
-      });
-      await refreshActionRequests();
-    } catch (error: unknown) {
-      console.error("Failed to submit action request:", error);
-      alert(getActionRequestErrorMessage(error));
-    } finally {
-      setIsSubmittingReturnRequest(false);
-    }
-  };
-
-  const reviewActionRequest = async (
-    requestId: number,
-    decision: "approved" | "rejected"
-  ) => {
-    if (isReviewingRequestId) {
-      return;
-    }
-
-    const promptMessage =
-      decision === "approved"
-        ? "Optional approval note"
-        : "Rejection reason (required)";
-    const decisionNote = window.prompt(promptMessage) || "";
-    if (decision === "rejected" && !decisionNote.trim()) {
-      alert("Rejection reason is required.");
-      return;
-    }
-
-    setIsReviewingRequestId(requestId);
-    try {
-      await saleService.reviewActionRequest(requestId, {
-        decision,
-        note: decisionNote.trim() || undefined,
-      });
-      await refreshActionRequests();
-      await loadSalesData();
-    } catch (error: unknown) {
-      console.error("Failed to review action request:", error);
-      alert(getActionRequestErrorMessage(error));
-    } finally {
-      setIsReviewingRequestId(null);
-    }
-  };
-
   const navItems = [
-    { id: "dashboard", label: "Dashboard", icon: "DB" },
-    { id: "items", label: "Items", icon: "IT" },
-    { id: "inventory", label: "Inventory", icon: "INV" },
-    { id: "reports", label: "Reports", icon: "RPT" },
-    { id: "receipts", label: "Receipts", icon: "REC" },
-    { id: "returns", label: "Returns", icon: "RTN" },
-    { id: "sync", label: "Offline Sync", icon: "SYNC" },
+    { id: "dashboard", label: "Dashboard" },
+    { id: "items", label: "Items" },
+    { id: "inventory", label: "Inventory" },
+    { id: "reports", label: "Reports" },
+    { id: "receipts", label: "Receipts" },
+    { id: "sync", label: "Offline Sync" },
   ];
+
+  const renderNavIcon = (id: string) => {
+    switch (id) {
+      case "dashboard":
+        return <DashboardIcon />;
+      case "items":
+        return <ItemsIcon />;
+      case "inventory":
+        return <InventoryIcon />;
+      case "reports":
+        return <ReportsIcon />;
+      case "receipts":
+        return <ReceiptsIcon />;
+      case "sync":
+        return <SyncIcon />;
+      default:
+        return <DashboardIcon />;
+    }
+  };
 
   // Reports helper functions
   const getDailyTransactions = () => {
@@ -1746,6 +1879,127 @@ function Admin() {
     return getMonthlyScopedTransactions().length;
   };
 
+  const formatDashboardHourLabel = (hour: number) => {
+    const suffix = hour >= 12 ? "pm" : "am";
+    const normalized = hour % 12 === 0 ? 12 : hour % 12;
+    return `${normalized}${suffix}`;
+  };
+
+  const getDashboardHourlySales = () => {
+    const seeded = DASHBOARD_HOURLY_BUCKETS.map((hour) => ({
+      hour,
+      label: formatDashboardHourLabel(hour),
+      amount: 0,
+    }));
+
+    const todayScopedTransactions = [...todayTransactions];
+    if (todayScopedTransactions.length === 0) {
+      return seeded;
+    }
+
+    const bucketMap = new Map<number, number>();
+    todayScopedTransactions.forEach((transaction) => {
+      const dateValue = new Date(transaction.date);
+      if (Number.isNaN(dateValue.getTime())) {
+        return;
+      }
+
+      const hour = dateValue.getHours();
+      const matchedBucket = DASHBOARD_HOURLY_BUCKETS.find((bucketHour) => hour >= bucketHour && hour < bucketHour + 2);
+      if (matchedBucket === undefined) {
+        return;
+      }
+
+      bucketMap.set(matchedBucket, (bucketMap.get(matchedBucket) || 0) + Number(transaction.amount || 0));
+    });
+
+    return seeded.map((bucket) => ({
+      ...bucket,
+      amount: Number(bucketMap.get(bucket.hour) || 0),
+    }));
+  };
+
+  const formatDashboardTimeAgo = (isoDateString?: string) => {
+    if (!isoDateString) {
+      return "-";
+    }
+
+    const dateValue = new Date(isoDateString);
+    if (Number.isNaN(dateValue.getTime())) {
+      return "-";
+    }
+
+    const diffMs = Date.now() - dateValue.getTime();
+    if (diffMs <= 0) {
+      return "just now";
+    }
+
+    const minuteMs = 60 * 1000;
+    const hourMs = 60 * minuteMs;
+    const dayMs = 24 * hourMs;
+
+    if (diffMs < hourMs) {
+      const minutes = Math.max(1, Math.floor(diffMs / minuteMs));
+      return `${minutes} min${minutes > 1 ? "s" : ""} ago`;
+    }
+
+    if (diffMs < dayMs) {
+      const hours = Math.floor(diffMs / hourMs);
+      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    }
+
+    const days = Math.floor(diffMs / dayMs);
+    return `${days} day${days > 1 ? "s" : ""} ago`;
+  };
+
+  const getDashboardItemSummary = (sale: Sale) => {
+    const saleItems = getSaleLineItems(sale);
+    if (!Array.isArray(saleItems) || saleItems.length === 0) {
+      return "No items";
+    }
+
+    return saleItems
+      .slice(0, 3)
+      .map((line: any) => `${Number(line.quantity || 0)}x ${line.item_name || line.name || "Item"}`)
+      .join(", ");
+  };
+
+  const getDashboardRecentOrders = () => {
+    return [...salesForReturns]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 6)
+      .map((sale) => {
+        const saleStatus = String(sale.status || "paid").toLowerCase();
+        const normalizedStatus =
+          saleStatus === "void" || saleStatus === "rejected"
+            ? "void"
+            : saleStatus === "refunded" || saleStatus === "refund"
+            ? "refunded"
+            : saleStatus === "pending" || saleStatus === "processing"
+            ? "preparing"
+            : "completed";
+
+        return {
+          id: sale.id,
+          orderRef: sale.public_reference || getReceiptReferenceDisplay(sale),
+          itemsSummary: getDashboardItemSummary(sale),
+          total: getSaleNetTotal(sale),
+          status: normalizedStatus,
+          timeAgo: formatDashboardTimeAgo(sale.created_at),
+        };
+      });
+  };
+
+  const openDashboardQuickAction = (action: DashboardQuickActionId) => {
+    if (action === "add_item") {
+      setCurrentPage("items");
+      return;
+    }
+
+    setReportsView("sales");
+    setCurrentPage("reports");
+  };
+
   const getItemImageUrl = (item: FoodItem) => {
     const securedPreviewUrl = itemImagePreviewUrls[item.id];
     if (securedPreviewUrl) {
@@ -1782,16 +2036,14 @@ function Admin() {
     }
 
     setIsUploadingImageItemId(item.id);
+    const previousPreviewUrl = itemImagePreviewUrlsRef.current[item.id];
+    const localPreviewUrl = URL.createObjectURL(file);
     try {
-      const existingPreview = itemImagePreviewUrlsRef.current[item.id];
-      if (existingPreview) {
-        URL.revokeObjectURL(existingPreview);
-        setItemImagePreviewUrls((current) => {
-          const next = { ...current };
-          delete next[item.id];
-          return next;
-        });
-      }
+      // Show immediate replacement preview while upload is in-flight.
+      setItemImagePreviewUrls((current) => ({
+        ...current,
+        [item.id]: localPreviewUrl,
+      }));
       loadingItemImageIdsRef.current.delete(item.id);
 
       const responseData = await productImageService.uploadImage(item.id, file);
@@ -1831,10 +2083,18 @@ function Admin() {
         )
       );
 
+      if (previousPreviewUrl && previousPreviewUrl !== localPreviewUrl) {
+        URL.revokeObjectURL(previousPreviewUrl);
+      }
+
       // Immediately fetch the protected image as blob so preview works with auth-protected routes.
       try {
-        const imageResponse = await apiClient.get(`/products/${item.id}/image`, {
+        const imageResponse = await apiClient.get(`/products/${item.id}/image?t=${Date.now()}`, {
           responseType: "blob",
+          headers: {
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
         });
         const objectUrl = URL.createObjectURL(imageResponse.data as Blob);
         setItemImagePreviewUrls((current) => {
@@ -1847,10 +2107,23 @@ function Admin() {
             [item.id]: objectUrl,
           };
         });
+        if (previousPreviewUrl && previousPreviewUrl !== objectUrl) {
+          URL.revokeObjectURL(previousPreviewUrl);
+        }
       } catch (previewError) {
         console.warn("Uploaded image saved but preview fetch failed.", previewError);
       }
     } catch (error: any) {
+      URL.revokeObjectURL(localPreviewUrl);
+      setItemImagePreviewUrls((current) => {
+        const next = { ...current };
+        if (previousPreviewUrl) {
+          next[item.id] = previousPreviewUrl;
+        } else {
+          delete next[item.id];
+        }
+        return next;
+      });
       console.error("Failed to upload product image:", error);
       const message =
         error?.message ||
@@ -2942,21 +3215,6 @@ function Admin() {
     return Number.isNaN(parsed.getTime()) ? "-" : parsed.toLocaleString();
   };
 
-  const actionRequestStatusSummary = returnsRequests.reduce(
-    (acc, request) => {
-      acc.total += 1;
-      acc[request.status] += 1;
-      return acc;
-    },
-    {
-      total: 0,
-      requested: 0,
-      approved: 0,
-      rejected: 0,
-      completed: 0,
-    }
-  );
-
   const exceptionSales = [...salesForReturns]
     .filter((sale) => {
       const status = String(sale.status || "").toLowerCase();
@@ -2968,15 +3226,12 @@ function Admin() {
         new Date(a.created_at || 0).getTime()
     )
     .slice(0, 15);
-
-  const pendingActionRequests = [...returnsRequests]
-    .filter((request) => request.status === "requested")
-    .sort(
-      (a, b) =>
-        new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime()
-    )
-    .slice(0, 15);
+  const voidedSalesCount = exceptionSales.filter(
+    (sale) => String(sale.status || "").toLowerCase() === "void"
+  ).length;
+  const refundedSalesCount = exceptionSales.filter(
+    (sale) => String(sale.status || "").toLowerCase() === "refunded"
+  ).length;
 
   const syncStatusSummaryFallback = syncQueueItems.reduce(
     (acc, queueItem) => {
@@ -3197,38 +3452,16 @@ function Admin() {
     }
   };
 
-  const selectedSaleForRequest = salesForReturns.find(
-    (sale) =>
-      sale.public_reference.toLowerCase() ===
-      newActionRequest.saleReference.trim().toLowerCase()
-  );
-
-  const filteredActionRequests = returnsRequests.filter((request) => {
-    if (returnsStatusFilter !== "all" && request.status !== returnsStatusFilter) {
-      return false;
-    }
-
-    const reference = request.sale?.public_reference || getSaleReferenceById(request.sale_id);
-    const search = returnsSearch.trim().toLowerCase();
-
-    if (!search) {
-      return true;
-    }
-
-    return (
-      reference.toLowerCase().includes(search) ||
-      request.reason.toLowerCase().includes(search) ||
-      request.status.toLowerCase().includes(search) ||
-      request.action_type.toLowerCase().includes(search)
-    );
-  });
-
   return (
     <div className="admin-container">
       <nav className="admin-nav">
         <div>
           <div className="nav-header">
-            <h2>La Tia Fanny POS</h2>
+            <div className="nav-brand-badge" aria-hidden="true">
+              <SidebarBrandIcon />
+            </div>
+            <h2 className="nav-brand-title">La Tia Fanny</h2>
+            <p className="nav-brand-subtitle">Restaurant POS</p>
           </div>
           <div className="nav-items">
             {navItems.map((item) => (
@@ -3237,7 +3470,7 @@ function Admin() {
                 className={`nav-btn ${currentPage === item.id ? "active" : ""}`}
                 onClick={() => setCurrentPage(item.id)}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon" aria-hidden="true">{renderNavIcon(item.id)}</span>
                 {item.label}
               </button>
             ))}
@@ -3248,9 +3481,11 @@ function Admin() {
             className={`nav-btn ${currentPage === "settings" ? "active" : ""}`}
             onClick={() => setCurrentPage("settings")}
           >
+            <span className="nav-icon" aria-hidden="true"><SettingsIcon /></span>
             Settings
           </button>
           <button className="logout-btn" onClick={handleLogout}>
+            <span className="nav-icon" aria-hidden="true"><LogoutIcon /></span>
             Logout
           </button>
         </div>
@@ -3263,30 +3498,243 @@ function Admin() {
           {currentPage === "inventory" && "Inventory Management"}
           {currentPage === "reports" && "Reports"}
           {currentPage === "receipts" && "Receipt Lookup And Reprint"}
-          {currentPage === "returns" && "Returns And Refunds"}
           {currentPage === "sync" && "Offline Sync Monitor"}
           {currentPage === "settings" && "Settings"}
         </h1>
         <p>Point of Sale System - Admin Panel</p>
         
         {currentPage === "dashboard" && (
-          <div className="dashboard-cards">
-            <div className="card">
-              <h3>Orders</h3>
-              <p className="card-value">{getDailyTotalTransactions()}</p>
+          <div className="dashboard-shell">
+            <div className="dashboard-kpi-grid">
+              <div className="dashboard-kpi-card kpi-orders">
+                <div className="dashboard-kpi-head">
+                  <h3>Orders</h3>
+                  <span className="dashboard-kpi-icon" aria-hidden="true"><ReceiptMiniIcon /></span>
+                </div>
+                <p className="dashboard-kpi-value">{getDailyTotalTransactions()}</p>
+              </div>
+              <div className="dashboard-kpi-card kpi-revenue">
+                <div className="dashboard-kpi-head">
+                  <h3>Revenue</h3>
+                  <span className="dashboard-kpi-icon" aria-hidden="true"><CoinIcon /></span>
+                </div>
+                <p className="dashboard-kpi-value">PHP {getDailyTotalRevenue().toFixed(2)}</p>
+              </div>
+              <div className="dashboard-kpi-card kpi-customers">
+                <div className="dashboard-kpi-head">
+                  <h3>Customers</h3>
+                  <span className="dashboard-kpi-icon" aria-hidden="true"><UsersIcon /></span>
+                </div>
+                <p className="dashboard-kpi-value">{uniqueCustomersCount}</p>
+              </div>
+              <div className="dashboard-kpi-card kpi-products">
+                <div className="dashboard-kpi-head">
+                  <h3>Products</h3>
+                  <span className="dashboard-kpi-icon" aria-hidden="true"><PackageMiniIcon /></span>
+                </div>
+                <p className="dashboard-kpi-value">{displayedItemsCount}</p>
+              </div>
             </div>
-            <div className="card">
-              <h3>Revenue</h3>
-              <p className="card-value">PHP {getDailyTotalRevenue().toFixed(2)}</p>
+
+            <div className="dashboard-main-grid">
+              <section className="dashboard-panel dashboard-sales-panel">
+                <div className="dashboard-panel-head">
+                  <h2>Today&apos;s Sales</h2>
+                  <span className="dashboard-panel-tag">Hourly</span>
+                </div>
+                <div className="dashboard-sales-chart">
+                  {(() => {
+                    const hourlySales = getDashboardHourlySales();
+                    const safePointCount = Math.max(hourlySales.length, 2);
+                    const maxAmount = Math.max(...hourlySales.map((row) => row.amount), 1);
+                    const chartWidth = 680;
+                    const chartHeight = 250;
+                    const padding = { top: 16, right: 16, bottom: 42, left: 48 };
+                    const plotWidth = chartWidth - padding.left - padding.right;
+                    const plotHeight = chartHeight - padding.top - padding.bottom;
+
+                    const points = hourlySales.map((row, index) => {
+                      const x =
+                        padding.left +
+                        (plotWidth / Math.max(safePointCount - 1, 1)) * index;
+                      const y =
+                        padding.top +
+                        plotHeight -
+                        (row.amount / maxAmount) * plotHeight;
+                      return { ...row, x, y };
+                    });
+
+                    const polylinePoints = points
+                      .map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`)
+                      .join(" ");
+                    const areaPoints = [
+                      `${padding.left},${padding.top + plotHeight}`,
+                      polylinePoints,
+                      `${padding.left + plotWidth},${padding.top + plotHeight}`,
+                    ].join(" ");
+
+                    const yTicks = 4;
+                    const tickValues = Array.from({ length: yTicks + 1 }, (_, idx) => {
+                      const ratio = idx / yTicks;
+                      return maxAmount * (1 - ratio);
+                    });
+
+                    return (
+                      <div className="dashboard-sales-chart-canvas">
+                        <svg
+                          className="dashboard-sales-chart-svg"
+                          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                          role="img"
+                          aria-label="Today's hourly sales chart"
+                        >
+                          {tickValues.map((tickValue, idx) => {
+                            const ratio = idx / yTicks;
+                            const y = padding.top + plotHeight * ratio;
+                            return (
+                              <g key={`tick-${idx}`}>
+                                <line
+                                  x1={padding.left}
+                                  y1={y}
+                                  x2={padding.left + plotWidth}
+                                  y2={y}
+                                  className="dashboard-chart-grid-line"
+                                />
+                                <text
+                                  x={padding.left - 8}
+                                  y={y + 4}
+                                  textAnchor="end"
+                                  className="dashboard-chart-axis-label"
+                                >
+                                  {`P${Math.round(tickValue)}`}
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                          <polygon
+                            points={areaPoints}
+                            className="dashboard-chart-area"
+                          />
+                          <polyline
+                            points={polylinePoints}
+                            className="dashboard-chart-line"
+                          />
+
+                          {points.map((point) => (
+                            <circle
+                              key={`point-${point.hour}`}
+                              cx={point.x}
+                              cy={point.y}
+                              r={4}
+                              className="dashboard-chart-point"
+                            />
+                          ))}
+
+                          {points.map((point) => (
+                            <text
+                              key={`label-${point.hour}`}
+                              x={point.x}
+                              y={chartHeight - 12}
+                              textAnchor="middle"
+                              className="dashboard-chart-axis-label"
+                            >
+                              {point.label}
+                            </text>
+                          ))}
+                        </svg>
+
+                        <div className="dashboard-sales-chart-summary">
+                          {hourlySales.map((row) => (
+                            <div key={`summary-${row.hour}`} className="dashboard-sales-chart-summary-item">
+                              <span className="chart-summary-time">{row.label}</span>
+                              <strong className="chart-summary-value">
+                                PHP {row.amount.toFixed(2)}
+                              </strong>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </section>
+
+              <aside className="dashboard-panel dashboard-quick-panel">
+                <div className="dashboard-panel-head">
+                  <h2>Quick Actions</h2>
+                </div>
+                <div className="dashboard-quick-list">
+                  <button
+                    type="button"
+                    className="dashboard-quick-btn"
+                    onClick={() => openDashboardQuickAction("add_item")}
+                  >
+                    <span className="dashboard-quick-icon" aria-hidden="true"><ItemsIcon /></span>
+                    Add New Item
+                  </button>
+                  <button
+                    type="button"
+                    className="dashboard-quick-btn"
+                    onClick={() => openDashboardQuickAction("daily_report")}
+                  >
+                    <span className="dashboard-quick-icon" aria-hidden="true"><ReportMiniIcon /></span>
+                    Generate Daily Report
+                  </button>
+                </div>
+              </aside>
             </div>
-            <div className="card">
-              <h3>Customers</h3>
-              <p className="card-value">{uniqueCustomersCount}</p>
-            </div>
-            <div className="card">
-              <h3>Products</h3>
-              <p className="card-value">{displayedItemsCount}</p>
-            </div>
+
+            <section className="dashboard-panel dashboard-orders-panel">
+              <div className="dashboard-panel-head">
+                <h2>Recent Orders</h2>
+                <button
+                  type="button"
+                  className="dashboard-link-btn"
+                  onClick={() => {
+                    setReportsView("sales");
+                    setCurrentPage("reports");
+                  }}
+                >
+                  View All
+                </button>
+              </div>
+              <div className="dashboard-orders-table-wrap">
+                <table className="dashboard-orders-table">
+                  <thead>
+                    <tr>
+                      <th>Order ID</th>
+                      <th>Items</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getDashboardRecentOrders().length > 0 ? (
+                      getDashboardRecentOrders().map((order) => (
+                        <tr key={order.id}>
+                          <td>{order.orderRef}</td>
+                          <td>{order.itemsSummary}</td>
+                          <td>PHP {order.total.toFixed(2)}</td>
+                          <td>
+                            <span className={`dashboard-status-badge status-${order.status}`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td>{order.timeAgo}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="dashboard-orders-empty">
+                          No recent orders found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
         )}
 
@@ -3297,12 +3745,14 @@ function Admin() {
                 className={`inv-tab-btn ${inventoryView === "inventory" ? "active" : ""}`}
                 onClick={() => setInventoryView("inventory")}
               >
+                <span className="inv-tab-icon" aria-hidden="true"><InventoryIcon /></span>
                 INVENTORY
               </button>
               <button
                 className={`inv-tab-btn ${inventoryView === "ingredients" ? "active" : ""}`}
                 onClick={() => setInventoryView("ingredients")}
               >
+                <span className="inv-tab-icon" aria-hidden="true"><LinkIcon /></span>
                 LINK INGREDIENTS
               </button>
             </div>
@@ -3378,14 +3828,6 @@ function Admin() {
                         <div key={item.id} className="inventory-row-wrapper">
                           <div className="table-row">
                             <div className="col-ingredient">
-                              <span
-                                className="delete-icon"
-                                style={{ cursor: "pointer" }}
-                                onClick={() => deleteInventoryItem(item.id)}
-                                title="Delete ingredient"
-                              >
-                                Delete
-                              </span>
                               <span className="item-name">{item.name}</span>
                             </div>
                             <div className="col-beginning"><span>{Number(summary?.beginning_today ?? item.quantity).toFixed(3)}</span></div>
@@ -3417,11 +3859,19 @@ function Admin() {
                                   {isApplyingOpeningItemId === item.id ? "..." : "+"}
                                 </button>
                                 <button
+                                  className="inventory-delete-action-btn"
+                                  onClick={() => requestDeleteInventoryItem(item.id)}
+                                  title={`Delete ${item.name}`}
+                                  aria-label={`Delete ${item.name}`}
+                                >
+                                  <TrashIcon />
+                                </button>
+                                <button
                                   className={`history-action-btn ${isExpanded ? "active" : ""}`}
                                   onClick={() => toggleInventoryHistory(item.id)}
                                   title="Toggle movement history"
                                 >
-                                  H
+                                  <HistoryIcon />
                                 </button>
                               </div>
                             </div>
@@ -3475,6 +3925,11 @@ function Admin() {
 
             {inventoryView === "ingredients" && (
               <div className="link-ingredients-view">
+                {ingredientEditorFeedback && (
+                  <div className={`ingredient-editor-feedback ${ingredientEditorFeedback.type}`}>
+                    {ingredientEditorFeedback.text}
+                  </div>
+                )}
                 <div className="ingredients-grid">
                   {categories.map((category) => (
                     <div key={category.id} className="ingredients-category-section">
@@ -3493,20 +3948,42 @@ function Admin() {
                               <div className="ingredient-inventory-selector">
                                 {editingIngredientItemId === item.id ? (
                                   <div className="edit-mode-container">
+                                    <div className="ingredient-editor-header">
+                                      <p className="ingredient-editor-title">Editing recipe links</p>
+                                      <p className="ingredient-editor-subtitle">
+                                        Select ingredient, enter quantity, and keep one row per ingredient.
+                                      </p>
+                                    </div>
                                     <div className="inventory-selections">
                                       {tempIngredients.map((ing, idx) => {
+                                        const selectedInventoryItem = inventory.find(
+                                          (inv) => inv.id === ing.inventoryItemId
+                                        );
+                                        const selectedIds = tempIngredients
+                                          .map((entry) => entry.inventoryItemId)
+                                          .filter((id) => id !== 0);
+                                        const isDuplicateSelection =
+                                          ing.inventoryItemId !== 0 &&
+                                          selectedIds.filter((id) => id === ing.inventoryItemId).length > 1;
                                         return (
                                           <div key={idx} className="inventory-selection">
+                                            <div className="inventory-selection-index">
+                                              Ingredient {idx + 1}
+                                            </div>
                                             <input
                                               type="text"
                                               list={`inventory-list-${item.id}`}
-                                              value={inventory.find((inv) => inv.id === ing.inventoryItemId)?.name || ""}
+                                              value={selectedInventoryItem?.name || ""}
                                               onChange={(e) => {
                                                 const typedValue = e.target.value;
-                                                const invItem = inventory.find((inv) => inv.name === typedValue);
+                                                const normalizedValue = typedValue.trim().toLowerCase();
+                                                const invItem = inventory.find(
+                                                  (inv) => inv.name.trim().toLowerCase() === normalizedValue
+                                                );
                                                 const newIngs = [...tempIngredients];
                                                 newIngs[idx].inventoryItemId = invItem?.id || 0;
                                                 setTempIngredients(newIngs);
+                                                setIngredientEditorFeedback(null);
                                               }}
                                               placeholder="Search or type ingredient..."
                                               className="inventory-select"
@@ -3517,29 +3994,45 @@ function Admin() {
                                                 <option key={inv.id} value={inv.name} />
                                               ))}
                                             </datalist>
-                                            <input
-                                              type="number"
-                                              min="0"
-                                              step="0.01"
-                                              value={ing.quantity === 0 ? "" : ing.quantity}
-                                              onChange={(e) => {
-                                                const newIngs = [...tempIngredients];
-                                                newIngs[idx].quantity = parseFloat(e.target.value) || 0;
-                                                setTempIngredients(newIngs);
-                                              }}
-                                              placeholder="0"
-                                              className="quantity-input"
-                                            />
-                                            <button
-                                              onClick={() => {
-                                                const newIngs = tempIngredients.filter((_, i) => i !== idx);
-                                                setTempIngredients(newIngs);
-                                              }}
-                                              className="remove-ingredient-btn"
-                                              title="Remove ingredient"
-                                            >
-                                              x
-                                            </button>
+                                            <div className="inventory-secondary-controls">
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={ing.quantity === 0 ? "" : ing.quantity}
+                                                onChange={(e) => {
+                                                  const newIngs = [...tempIngredients];
+                                                  newIngs[idx].quantity = parseFloat(e.target.value) || 0;
+                                                  setTempIngredients(newIngs);
+                                                  setIngredientEditorFeedback(null);
+                                                }}
+                                                placeholder={selectedInventoryItem?.unit ? `Qty (${selectedInventoryItem.unit})` : "Qty"}
+                                                className="quantity-input"
+                                              />
+                                              <span className="quantity-unit-chip">
+                                                {selectedInventoryItem?.unit || "unit"}
+                                              </span>
+                                              <button
+                                                onClick={() => {
+                                                  const newIngs = tempIngredients.filter((_, i) => i !== idx);
+                                                  setTempIngredients(
+                                                    newIngs.length > 0
+                                                      ? newIngs
+                                                      : [{ inventoryItemId: 0, quantity: 0 }]
+                                                  );
+                                                  setIngredientEditorFeedback(null);
+                                                }}
+                                                className="remove-ingredient-btn"
+                                                title="Remove ingredient"
+                                              >
+                                                Remove
+                                              </button>
+                                            </div>
+                                            {isDuplicateSelection && (
+                                              <div className="ingredient-inline-warning">
+                                                Duplicate ingredient selected.
+                                              </div>
+                                            )}
                                           </div>
                                         );
                                       })}
@@ -3549,39 +4042,54 @@ function Admin() {
                                         onClick={() => {
                                           const newIngs = [...tempIngredients, { inventoryItemId: 0, quantity: 0 }];
                                           setTempIngredients(newIngs);
+                                          setIngredientEditorFeedback(null);
                                         }}
                                         className="add-ingredient-btn"
                                         title="Add ingredient"
                                       >
-                                        +
+                                        Add Ingredient
                                       </button>
                                       <button
                                         onClick={saveItemIngredients}
                                         className="save-ingredients-btn"
+                                        disabled={isSavingIngredientLinks}
                                       >
-                                        SAVE
+                                        {isSavingIngredientLinks ? "Saving..." : "Save Recipe"}
+                                      </button>
+                                      <button
+                                        onClick={cancelEditingIngredients}
+                                        className="cancel-ingredients-btn"
+                                        disabled={isSavingIngredientLinks}
+                                      >
+                                        Cancel
                                       </button>
                                     </div>
                                   </div>
                                 ) : (
                                   <div className="view-mode-container">
                                     <div className="inventory-selections">
-                                      {(itemIngredients[item.id] || []).map((ing, idx) => {
-                                        const invItem = inventory.find((inv) => inv.id === ing.inventoryItemId);
-                                        return (
-                                          <div key={idx} className="inventory-selection-display">
-                                            <span className="ingredient-name">{invItem?.name || "N/A"}</span>
-                                            <span className="ingredient-qty">{ing.quantity} {invItem?.unit}</span>
-                                          </div>
-                                        );
-                                      })}
+                                      {(itemIngredients[item.id] || []).length > 0 ? (
+                                        (itemIngredients[item.id] || []).map((ing, idx) => {
+                                          const invItem = inventory.find((inv) => inv.id === ing.inventoryItemId);
+                                          return (
+                                            <div key={idx} className="inventory-selection-display">
+                                              <span className="ingredient-name">{invItem?.name || "N/A"}</span>
+                                              <span className="ingredient-qty">{ing.quantity} {invItem?.unit}</span>
+                                            </div>
+                                          );
+                                        })
+                                      ) : (
+                                        <div className="ingredient-empty-state">
+                                          No ingredients linked yet.
+                                        </div>
+                                      )}
                                     </div>
                                     <button
                                       onClick={() => startEditingIngredients(item.id)}
                                       className="edit-ingredients-btn"
                                       title="Edit ingredients"
                                     >
-                                      Edit
+                                      {(itemIngredients[item.id] || []).length > 0 ? "Edit Recipe" : "Link Ingredients"}
                                     </button>
                                   </div>
                                 )}
@@ -3849,18 +4357,21 @@ function Admin() {
                 className={`report-tab-btn ${reportsView === "sales" ? "active" : ""}`}
                 onClick={() => setReportsView("sales")}
               >
+                <span className="report-tab-icon" aria-hidden="true"><ReportsIcon /></span>
                 Sales Report
               </button>
               <button
                 className={`report-tab-btn ${reportsView === "inventory" ? "active" : ""}`}
                 onClick={() => setReportsView("inventory")}
               >
+                <span className="report-tab-icon" aria-hidden="true"><InventoryIcon /></span>
                 Inventory Report
               </button>
               <button
                 className={`report-tab-btn ${reportsView === "exceptions" ? "active" : ""}`}
                 onClick={() => setReportsView("exceptions")}
               >
+                <span className="report-tab-icon" aria-hidden="true"><AlertTriangleIcon /></span>
                 Exception Report
               </button>
             </div>
@@ -4088,49 +4599,17 @@ function Admin() {
               <div className="report-content">
                 <div className="report-grid">
                   <div className="report-card">
-                    <h3>Pending Requests</h3>
-                    <p className="report-value">{actionRequestStatusSummary.requested}</p>
+                    <h3>Voided Sales</h3>
+                    <p className="report-value">{voidedSalesCount}</p>
                   </div>
                   <div className="report-card">
-                    <h3>Approved Requests</h3>
-                    <p className="report-value">{actionRequestStatusSummary.approved}</p>
-                  </div>
-                  <div className="report-card">
-                    <h3>Rejected Requests</h3>
-                    <p className="report-value">{actionRequestStatusSummary.rejected}</p>
+                    <h3>Refunded Sales</h3>
+                    <p className="report-value">{refundedSalesCount}</p>
                   </div>
                   <div className="report-card">
                     <h3>Voided Or Refunded Sales</h3>
                     <p className="report-value">{exceptionSales.length}</p>
                   </div>
-                </div>
-
-                <div className="transactions-table">
-                  <h2>Pending Approval Requests</h2>
-                  {pendingActionRequests.length > 0 ? (
-                    <table className="daily-transactions">
-                      <thead>
-                        <tr>
-                          <th>Reference</th>
-                          <th>Type</th>
-                          <th>Reason</th>
-                          <th>Requested</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pendingActionRequests.map((request) => (
-                          <tr key={request.id}>
-                            <td>{request.sale?.public_reference || getSaleReferenceById(request.sale_id)}</td>
-                            <td className="capitalize">{request.action_type}</td>
-                            <td>{request.reason}</td>
-                            <td>{formatDateTime(request.created_at)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="no-data">No pending approval requests.</p>
-                  )}
                 </div>
 
                 <div className="transactions-table">
@@ -4312,212 +4791,6 @@ function Admin() {
                   </>
                 ) : (
                   <p className="no-data">Select a receipt from the result list to view full details.</p>
-                )}
-              </section>
-            </div>
-          </div>
-        )}
-
-        {currentPage === "returns" && (
-          <div className="returns-page">
-            <div className="returns-grid">
-              <section className="returns-panel">
-                <h2>Create Return Or Void Request</h2>
-                <p className="returns-subtitle">
-                  Enter the official sale reference, choose the request type, and submit it for admin approval.
-                </p>
-
-                <div className="returns-form">
-                  <label htmlFor="sale-reference-input">Sale Reference</label>
-                  <input
-                    id="sale-reference-input"
-                    list="sale-reference-list"
-                    value={newActionRequest.saleReference}
-                    onChange={(e) =>
-                      setNewActionRequest({
-                        ...newActionRequest,
-                        saleReference: e.target.value,
-                      })
-                    }
-                    placeholder="Example: SALE-20260423-0001"
-                  />
-                  <datalist id="sale-reference-list">
-                    {salesForReturns.map((sale) => (
-                      <option key={sale.id} value={sale.public_reference} />
-                    ))}
-                  </datalist>
-
-                  <div className="returns-form-row">
-                    <div className="returns-form-field">
-                      <label htmlFor="request-type">Request Type</label>
-                      <select
-                        id="request-type"
-                        value={newActionRequest.actionType}
-                        onChange={(e) =>
-                          setNewActionRequest({
-                            ...newActionRequest,
-                            actionType: e.target.value as SaleActionType,
-                          })
-                        }
-                      >
-                        <option value="refund">Refund</option>
-                        <option value="void">Void</option>
-                      </select>
-                    </div>
-
-                    <div className="returns-form-field">
-                      <label htmlFor="requested-amount">Requested Amount</label>
-                      <input
-                        id="requested-amount"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        disabled={newActionRequest.actionType !== "refund"}
-                        value={newActionRequest.requestedAmount}
-                        onChange={(e) =>
-                          setNewActionRequest({
-                            ...newActionRequest,
-                            requestedAmount: e.target.value,
-                          })
-                        }
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-
-                  <label htmlFor="request-reason">Reason</label>
-                  <textarea
-                    id="request-reason"
-                    value={newActionRequest.reason}
-                    onChange={(e) =>
-                      setNewActionRequest({
-                        ...newActionRequest,
-                        reason: e.target.value,
-                      })
-                    }
-                    rows={3}
-                    placeholder="Explain why this transaction needs a return, refund, or void."
-                  />
-
-                  <button
-                    className="returns-submit-btn"
-                    onClick={submitActionRequest}
-                    disabled={isSubmittingReturnRequest}
-                  >
-                    {isSubmittingReturnRequest ? "SUBMITTING..." : "SUBMIT REQUEST"}
-                  </button>
-                </div>
-
-                {selectedSaleForRequest && (
-                  <div className="return-sale-preview">
-                    <h3>Matched Sale</h3>
-                    <div className="return-sale-preview-row">
-                      <span>Reference</span>
-                      <strong>{selectedSaleForRequest.public_reference}</strong>
-                    </div>
-                    <div className="return-sale-preview-row">
-                      <span>Total</span>
-                      <strong>PHP {Number(selectedSaleForRequest.total || 0).toFixed(2)}</strong>
-                    </div>
-                    <div className="return-sale-preview-row">
-                      <span>Status</span>
-                      <strong className="capitalize">{selectedSaleForRequest.status || "paid"}</strong>
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              <section className="returns-panel">
-                <div className="returns-queue-header">
-                  <h2>Approval Queue</h2>
-                  <div className="returns-queue-controls">
-                    <select
-                      value={returnsStatusFilter}
-                      onChange={(e) =>
-                        setReturnsStatusFilter(
-                          e.target.value as SaleActionRequestStatus | "all"
-                        )
-                      }
-                    >
-                      <option value="all">All</option>
-                      <option value="requested">Requested</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="completed">Completed</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={returnsSearch}
-                      onChange={(e) => setReturnsSearch(e.target.value)}
-                      placeholder="Search reference, reason, or status"
-                    />
-                  </div>
-                </div>
-
-                {isLoadingReturns ? (
-                  <p className="no-data">Loading requests...</p>
-                ) : filteredActionRequests.length === 0 ? (
-                  <p className="no-data">No return or void requests found.</p>
-                ) : (
-                  <div className="returns-request-list">
-                    {filteredActionRequests.map((request) => {
-                      const reference =
-                        request.sale?.public_reference ||
-                        getSaleReferenceById(request.sale_id);
-
-                      return (
-                        <article key={request.id} className="returns-request-card">
-                          <div className="returns-request-top">
-                            <div>
-                              <div className="returns-request-reference">{reference}</div>
-                              <div className="returns-request-meta">
-                                {new Date(request.created_at || "").toLocaleString()}  | 
-                                <span className="capitalize"> {request.action_type}</span>
-                                {request.requested_amount
-                                  ? `  |  PHP ${Number(request.requested_amount).toFixed(2)}`
-                                  : ""}
-                              </div>
-                            </div>
-                            <span className={`request-status status-${request.status}`}>
-                              {request.status}
-                            </span>
-                          </div>
-
-                          <p className="returns-request-reason">{request.reason}</p>
-                          {request.decision_note && (
-                            <p className="returns-request-note">
-                              Admin Note: {request.decision_note}
-                            </p>
-                          )}
-
-                          {request.status === "requested" && (
-                            <div className="returns-request-actions">
-                              <button
-                                className="approve-request-btn"
-                                disabled={isReviewingRequestId === request.id}
-                                onClick={() =>
-                                  reviewActionRequest(request.id, "approved")
-                                }
-                              >
-                                {isReviewingRequestId === request.id
-                                  ? "PROCESSING..."
-                                  : "APPROVE"}
-                              </button>
-                              <button
-                                className="reject-request-btn"
-                                disabled={isReviewingRequestId === request.id}
-                                onClick={() =>
-                                  reviewActionRequest(request.id, "rejected")
-                                }
-                              >
-                                REJECT
-                              </button>
-                            </div>
-                          )}
-                        </article>
-                      );
-                    })}
-                  </div>
                 )}
               </section>
             </div>
@@ -4988,6 +5261,37 @@ function Admin() {
                     className="confirm-btn"
                   >
                     Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Inventory Delete Confirmation Modal */}
+        {inventoryDeleteConfirmId && (
+          <div className="modal-backdrop">
+            <div className="modal-container">
+              <div className="confirmation-modal">
+                <h2>Delete Ingredient?</h2>
+                <p className="confirmation-text">
+                  Are you sure you want to delete <strong>{inventoryDeleteConfirmName}</strong>?
+                </p>
+                <div className="modal-buttons">
+                  <button
+                    onClick={() => {
+                      setInventoryDeleteConfirmId(null);
+                      setInventoryDeleteConfirmName("");
+                    }}
+                    className="cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => confirmDeleteInventoryItem(inventoryDeleteConfirmId)}
+                    className="confirm-delete-btn"
+                  >
+                    Delete
                   </button>
                 </div>
               </div>
