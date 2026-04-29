@@ -110,10 +110,55 @@ The frontend now includes 6 fully integrated API services:
 - `getSalesByDateRange()` - Get sales in date range
 - `getDailySales()` - Get today's sales
 - `recordPayment()` - Record payment
+- mutating calls automatically include `X-Idempotency-Key`
+
+### Duplicate-Charge Enforcement (Backend Required)
+Backend must enforce idempotency for `POST /sales` and `POST /sales/{id}/payment`:
+
+- Read `X-Idempotency-Key` from request headers
+- Hash and store key in `idempotency_keys.key_hash`
+- Hash canonical request payload into `idempotency_keys.request_hash`
+- Use unique guard on `(scope, key_hash)` to block races
+- On exact replay (same key + same payload hash), return original response from `response_body`
+- On key reuse with different payload hash, return conflict and do not create a second charge
+- Persist replay attempts and decisions in `payment_replay_audit`
+
+Recommended response behavior:
+
+- `201/200` for first successful write
+- `200` for exact replay with header `X-Idempotent-Replay: true`
+- `409` for same key but mismatched payload
+- `425` or `409` when the same key is currently processing/locked
+
+Database support added in `database/01_schema.sql`:
+
+- `idempotency_keys` table (key registry, request hash, stored response, expiry)
+- `payments` constraints (`uq_payments_sale_idempotency`, `uq_payments_gateway_reference`)
+- `payment_replay_audit` table for accepted/replayed/blocked outcomes
 
 ### 6. **dashboardService** - Dashboard Analytics
 - `getStats()` - Get dashboard statistics
 - `getSalesTrend()` - Get sales trends
+
+### 7. **syncService** - Offline Queue Monitoring
+- `getVersion()` - Get sync protocol/version info
+- `getQueue({ status })` - List offline queue records
+- `getSummary()` - Aggregate queue status counts
+- `retryQueueItem(id)` - Retry failed or queued record
+- `cancelQueueItem(id)` - Stop syncing a queue record
+- `resolveConflict(id, data)` - Resolve conflict (`retry|cancel|force`)
+
+### Offline Sync Backend Contract (Required)
+To fully support offline cashier transaction syncing and admin-side recovery tools, add these backend routes:
+
+- `GET /api/v1/sync/version`
+- `GET /api/v1/sync/queue`
+- `GET /api/v1/sync/queue/summary`
+- `POST /api/v1/sync/queue/{id}/retry`
+- `POST /api/v1/sync/queue/{id}/cancel`
+- `POST /api/v1/sync/queue/{id}/resolve`
+
+If these endpoints are missing, the admin app now shows a warning banner in the Offline Sync page instead of failing silently.
 
 ### Database
 - Host: `127.0.0.1:3306`

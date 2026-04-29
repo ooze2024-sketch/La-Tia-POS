@@ -138,6 +138,17 @@ MySQL Database (latia_pos)
 - ✅ `GET /sales/date-range` - Get sales by date
 - ✅ `GET /sales/daily/today` - Get today's sales
 
+### Duplicate-Charge Enforcement And Replay Controls
+- All mutating sale/payment requests should include `X-Idempotency-Key`
+- Backend must enforce single-write semantics per idempotency key + scope
+- Exact replay should return original response (no second payment row)
+- Reuse of the same key with different request payload must return `409`
+- Recommended replay marker response header: `X-Idempotent-Replay: true`
+- SQL support is defined in `database/01_schema.sql`:
+  - `idempotency_keys`
+  - `payments` unique constraints for duplicate prevention
+  - `payment_replay_audit`
+
 ### Dashboard
 - ✅ `GET /dashboard/stats` - Dashboard statistics
 - ✅ `GET /dashboard/sales-trend` - Sales trends

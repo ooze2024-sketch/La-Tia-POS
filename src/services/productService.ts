@@ -11,6 +11,7 @@ export interface Product {
   description?: string;
   is_active?: boolean;
   image_path?: string;
+  image_url?: string;
   created_at?: string;
   updated_at?: string;
 }

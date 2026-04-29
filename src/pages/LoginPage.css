@@ -1,349 +1,385 @@
-/* LoginPage.css */
+:root {
+  --brand-cocoa: oklch(0.31 0.06 48);
+  --brand-cocoa-soft: oklch(0.45 0.09 52);
+  --brand-terracotta: oklch(0.58 0.15 43);
+  --brand-ember: oklch(0.66 0.13 57);
+  --brand-cream: oklch(0.985 0.018 84);
+  --brand-text: oklch(0.24 0.045 48);
+  --brand-muted: oklch(0.47 0.045 55);
+  --brand-border: oklch(0.8 0.04 70);
+  --brand-ring: oklch(0.58 0.15 43);
+}
 
 * {
   box-sizing: border-box;
 }
 
-/* ============================================================
-   Root styles
-   ============================================================ */
-
-html {
-  height: 100%;
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
-
-#root {
-  height: 100%;
-}
-
-/* ============================================================
-   Background & Container
-   ============================================================ */
 
 .bg {
-  background: linear-gradient(135deg, #ede5d6 0%, #f5f0e8 100%);
+  position: relative;
   width: 100%;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 2rem 1rem;
+  overflow: hidden;
+  background: #c08b63;
+  background:
+    radial-gradient(circle at 18% 12%, oklch(0.78 0.12 62 / 0.72), transparent 28rem),
+    radial-gradient(circle at 85% 86%, oklch(0.51 0.14 39 / 0.5), transparent 30rem),
+    linear-gradient(135deg, oklch(0.91 0.05 78), oklch(0.72 0.08 59) 48%, oklch(0.42 0.08 45));
 }
 
-/* ============================================================
-   Login Card
-   ============================================================ */
+.bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image:
+    repeating-linear-gradient(90deg, oklch(1 0 0 / 0.08) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(0deg, oklch(0.22 0.04 48 / 0.045) 0 1px, transparent 1px 6px);
+}
+
+.bg::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 7rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, oklch(0.39 0.073 48 / 0.25), transparent);
+}
+
+.login-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 26rem;
+  transform: translateY(-1rem);
+}
+
+.brand-stack {
+  text-align: center;
+  margin-bottom: 1.2rem;
+  color: oklch(0.985 0.018 84);
+  text-shadow: 0 1px 8px oklch(0.27 0.055 40 / 0.26);
+}
+
+.brand-icon {
+  width: 3.7rem;
+  height: 3.7rem;
+  border-radius: 999px;
+  margin: 0 auto 0.8rem auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid oklch(0.985 0.018 84 / 0.25);
+  background: linear-gradient(145deg, oklch(0.43 0.08 49 / 0.45), oklch(0.34 0.07 47 / 0.28));
+  box-shadow:
+    0 28px 70px -24px oklch(0.18 0.05 42 / 0.55),
+    0 10px 28px -18px oklch(0.2 0.06 42 / 0.45);
+  backdrop-filter: blur(6px);
+}
+
+.brand-label {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  opacity: 0.88;
+}
+
+.brand-title {
+  margin: 0.45rem 0 0;
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+  font-size: clamp(2.2rem, 6vw, 2.85rem);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: 0;
+}
 
 .login-card {
-  width: 100%;
-  max-width: 420px;
-  background: #ffffff;
-  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.3s ease;
+  border-radius: 1.12rem;
+  border: 1px solid oklch(0.985 0.018 84 / 0.32);
+  background: #f5efe6;
+  background: oklch(0.985 0.014 78 / 0.96);
+  box-shadow:
+    0 32px 74px -24px oklch(0.18 0.05 42 / 0.58),
+    0 12px 26px -16px oklch(0.2 0.06 42 / 0.46);
+  backdrop-filter: blur(14px);
 }
 
-.login-card:hover {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.06);
+.card-top {
+  padding: 1.35rem 1.75rem 1.5rem;
+  color: var(--brand-cream);
+  background: linear-gradient(135deg, #5f3518, #ab5628 48%, #c35b2d);
+  background: linear-gradient(
+    135deg,
+    var(--brand-cocoa),
+    var(--brand-cocoa-soft) 48%,
+    var(--brand-terracotta)
+  );
 }
 
-/* ============================================================
-   Header with title and subtitle
-   ============================================================ */
-
-.header {
-  background: linear-gradient(135deg, #7d5941 0%, #6b4e35 100%);
-  color: #ffffff;
-  text-align: center;
-  padding: 48px 32px;
-  border-bottom: 8px solid #5c3f24;
-}
-
-.header h1 {
-  margin: 0 0 8px 0;
-  font-size: 42px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  font-family: Georgia, "Garamond", serif;
-  line-height: 1.2;
-}
-
-.header p {
+.card-label {
   margin: 0;
-  font-size: 15px;
-  font-weight: 400;
-  letter-spacing: 0.4px;
-  opacity: 0.94;
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  opacity: 0.75;
 }
 
-/* ============================================================
-   Form body with improved spacing
-   ============================================================ */
+.card-top h2 {
+  margin: 0.56rem 0 0;
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+  font-size: clamp(1.95rem, 5.4vw, 2.22rem);
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0;
+}
 
 .body {
-  padding: 40px;
+  padding: 1.55rem 1.75rem 1.7rem;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 1rem;
+}
+
+.error-message {
+  color: oklch(0.42 0.17 27);
+  background: oklch(0.95 0.04 27);
+  border: 1px solid oklch(0.85 0.06 27);
+  border-radius: 0.7rem;
+  padding: 0.64rem 0.78rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
-/* ============================================================
-   Form labels
-   ============================================================ */
-
-.body label {
-  font-size: 12px;
+.form-group label {
+  margin: 0;
+  color: oklch(0.33 0.06 48);
+  font-size: 0.72rem;
+  line-height: 1;
   font-weight: 700;
-  color: #6b5647;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  display: block;
+  letter-spacing: 0.16em;
 }
 
-/* ============================================================
-   Form inputs (text & password)
-   ============================================================ */
-
-input[type="text"],
-input[type="password"] {
-  padding: 14px 16px;
-  border-radius: 8px;
-  border: 2px solid #d9cfc5;
-  background-color: #fafaf9;
-  font-size: 16px;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  color: #1a1a1a;
+.input-shell {
   width: 100%;
-}
-
-input[type="text"]::placeholder,
-input[type="password"]::placeholder {
-  color: #b8aea3;
-}
-
-/* Focus state with brown accent and glow */
-input[type="text"]:focus,
-input[type="password"]:focus {
-  outline: none;
-  border-color: #8b5f3f;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 4px rgba(139, 95, 63, 0.1), inset 0 0 0 1px rgba(139, 95, 63, 0.05);
-}
-
-/* Disabled state */
-input[type="text"]:disabled,
-input[type="password"]:disabled {
-  background-color: #f0ebe5;
-  color: #999999;
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
-/* ============================================================
-   Password input wrapper with toggle button
-   ============================================================ */
-
-.password-input-wrapper {
-  position: relative;
-  display: flex;
+  min-height: 3.15rem;
+  display: grid;
   align-items: center;
-  width: 100%;
+  grid-template-columns: 42px minmax(0, 1fr);
+  border-radius: 0.95rem;
+  border: 1px solid #d0c4b5;
+  background: #f9f2e8;
+  background: linear-gradient(180deg, #fcf8f2 0%, #f7efe3 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: 180ms ease;
+  overflow: hidden;
 }
 
-.password-input-wrapper input[type="password"] {
-  padding-right: 48px;
+.input-shell:focus-within {
+  border-color: #b4541f;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(180, 84, 31, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.input-icon {
+  pointer-events: none;
+  color: #7b6a59;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  width: 18px;
+  height: 18px;
+}
+
+.field-input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--brand-text);
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0 16px 0 0;
+  line-height: 1.2;
+  border-radius: 0;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.login-card .input-shell .field-input {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.field-input::placeholder {
+  color: oklch(0.46 0.045 55 / 0.65);
+}
+
+.field-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.username-shell .field-input {
+  padding-right: 14px;
+}
+
+.password-shell {
+  grid-template-columns: 42px minmax(0, 1fr) 46px;
+  column-gap: 8px;
+  padding-right: 8px;
+}
+
+.password-shell .field-input {
+  padding-right: 0;
 }
 
 .password-toggle-btn {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px 8px;
-  font-size: 18px;
-  color: #a89a8e;
-  transition: all 0.2s ease;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  justify-self: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #6f5039;
+  cursor: pointer;
+  transition: 180ms ease, transform 120ms ease;
+  padding: 0;
+}
+
+.password-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  stroke: currentColor;
+  fill: none;
 }
 
 .password-toggle-btn:hover:not(:disabled) {
-  color: #7d5941;
-}
-
-.password-toggle-btn:active:not(:disabled) {
-  transform: translateY(-50%) scale(0.94);
+  color: #4f3422;
+  background: rgba(111, 80, 57, 0.1);
+  transform: translateY(-1px);
 }
 
 .password-toggle-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.55;
 }
-
-/* ============================================================
-   Error message alert
-   ============================================================ */
-
-.error-message {
-  color: #c9514f;
-  font-size: 13px;
-  padding: 12px 14px;
-  background-color: #fce4e4;
-  border-radius: 6px;
-  border-left: 4px solid #c9514f;
-  line-height: 1.5;
-  margin-bottom: 4px;
-}
-
-/* ============================================================
-   Login button with improved states
-   ============================================================ */
 
 .login-btn {
-  margin-top: 12px;
-  background: linear-gradient(135deg, #8b5f3f 0%, #7a5238 100%);
-  color: #ffffff;
-  padding: 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  box-shadow: 0 4px 12px rgba(139, 95, 63, 0.25);
   width: 100%;
+  min-height: 3.1rem;
+  margin-top: 0.25rem;
+  border: none;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #d88845, #b95a2c);
+  background: linear-gradient(180deg, oklch(0.69 0.13 60), oklch(0.58 0.15 43));
+  color: var(--brand-cream);
+  font-size: 0.9rem;
+  line-height: 1;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  box-shadow:
+    0 16px 30px -16px oklch(0.36 0.1 43 / 0.7),
+    inset 0 1px 0 oklch(1 0 0 / 0.22);
+  transition: 180ms ease;
 }
 
 .login-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7a5238 0%, #6b4830 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 95, 63, 0.35);
+  filter: brightness(1.02);
 }
 
 .login-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(139, 95, 63, 0.25);
 }
 
 .login-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.72;
   cursor: not-allowed;
-  transform: none;
 }
-
-/* ============================================================
-   Footer section
-   ============================================================ */
 
 .footer {
+  border-top: 1px solid var(--brand-border);
+  background: oklch(0.91 0.035 78 / 0.65);
+  padding: 0.95rem 1.75rem;
   text-align: center;
-  font-size: 11px;
-  padding: 24px 20px;
-  background: #faf9f7;
-  color: #8f8177;
-  line-height: 1.7;
-  border-top: 1px solid #f0ebe5;
-  letter-spacing: 0.3px;
 }
 
-/* ============================================================
-   Mobile responsiveness (tablets and smaller)
-   ============================================================ */
-
-@media (max-width: 640px) {
-  .bg {
-    padding: 16px;
-  }
-
-  .login-card {
-    max-width: 90%;
-  }
-
-  .header {
-    padding: 36px 24px;
-  }
-
-  .header h1 {
-    font-size: 32px;
-    margin-bottom: 6px;
-  }
-
-  .header p {
-    font-size: 14px;
-  }
-
-  .body {
-    padding: 32px 24px;
-    gap: 24px;
-  }
-
-  input[type="text"],
-  input[type="password"] {
-    padding: 14px 14px;
-    font-size: 16px;
-  }
-
-  .login-btn {
-    padding: 14px;
-    font-size: 14px;
-  }
-
-  .footer {
-    padding: 20px 16px;
-    font-size: 10px;
-  }
+.footer div {
+  color: oklch(0.46 0.045 55);
+  font-size: 0.76rem;
+  line-height: 1.5;
 }
 
-/* ============================================================
-   Accessibility: Focus visible styles
-   ============================================================ */
-
-input[type="text"]:focus-visible,
-input[type="password"]:focus-visible,
+.field-input:focus-visible,
+.password-toggle-btn:focus-visible,
 .login-btn:focus-visible {
-  outline: 2px solid #8b5f3f;
-  outline-offset: 2px;
+  outline: 2px solid var(--brand-ring);
+  outline-offset: 1px;
 }
 
-.password-toggle-btn:focus-visible {
-  outline: none;
-}
+@media (max-width: 560px) {
+  .bg {
+    padding: 1.4rem 1rem;
+  }
 
-/* ============================================================
-   Reduced motion for accessibility
-   ============================================================ */
+  .login-shell {
+    transform: translateY(-0.45rem);
+    max-width: 23.8rem;
+  }
+
+  .card-top,
+  .body,
+  .footer {
+    padding-left: 1.35rem;
+    padding-right: 1.35rem;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .login-card,
-  input[type="text"],
-  input[type="password"],
-  .login-btn,
-  .password-toggle-btn {
+  .input-shell,
+  .password-toggle-btn,
+  .login-btn {
     transition: none;
   }
 }

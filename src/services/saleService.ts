@@ -19,6 +19,7 @@ export interface Sale {
   discount?: number;
   tax?: number;
   total: number;
+  net_total?: number;
   status?: string;
   user?: any;
   customer?: any;
@@ -26,6 +27,45 @@ export interface Sale {
   payments?: any[];
   created_at?: string;
   updated_at?: string;
+}
+
+export type SaleActionType = 'void' | 'refund';
+export type SaleActionRequestStatus =
+  | 'requested'
+  | 'approved'
+  | 'rejected'
+  | 'completed';
+
+export interface SaleActionRequest {
+  id: number;
+  sale_id: number;
+  action_type: SaleActionType;
+  reason: string;
+  requested_amount?: number | null;
+  status: SaleActionRequestStatus;
+  decision_note?: string | null;
+  sale?: Sale;
+  requested_by?: {
+    id: number;
+    name: string;
+  } | null;
+  reviewed_by?: {
+    id: number;
+    name: string;
+  } | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateSaleActionRequest {
+  action_type: SaleActionType;
+  reason: string;
+  requested_amount?: number;
+}
+
+export interface ReviewSaleActionRequest {
+  decision: 'approved' | 'rejected';
+  note?: string;
 }
 
 export interface CreateSaleRequest {
@@ -58,6 +98,11 @@ const saleService = {
 
   getById: async (id: number): Promise<Sale> => {
     const response = await apiClient.get(`/sales/${id}`);
+    return response.data.data;
+  },
+
+  getByReference: async (reference: string): Promise<Sale> => {
+    const response = await apiClient.get(`/sales/reference/${encodeURIComponent(reference)}`);
     return response.data.data;
   },
 
@@ -97,6 +142,31 @@ const saleService = {
   ): Promise<any> => {
     const response = await apiClient.post(`/sales/${saleId}/payment`, paymentData);
     return response.data;
+  },
+
+  getActionRequests: async (
+    params?: { status?: SaleActionRequestStatus }
+  ): Promise<SaleActionRequest[]> => {
+    const response = await apiClient.get('/sales/action-requests', {
+      params,
+    });
+    return response.data.data || [];
+  },
+
+  requestAction: async (
+    saleId: number,
+    data: CreateSaleActionRequest
+  ): Promise<SaleActionRequest> => {
+    const response = await apiClient.post(`/sales/${saleId}/action-requests`, data);
+    return response.data.data;
+  },
+
+  reviewActionRequest: async (
+    requestId: number,
+    data: ReviewSaleActionRequest
+  ): Promise<SaleActionRequest> => {
+    const response = await apiClient.post(`/sales/action-requests/${requestId}/review`, data);
+    return response.data.data;
   },
 };
 

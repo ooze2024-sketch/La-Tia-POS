@@ -30,6 +30,15 @@ export interface StockMovement {
   created_at?: string;
 }
 
+export interface InventoryDailySummary {
+  inventory_item_id: number;
+  beginning_today: number;
+  added_today: number;
+  deducted_today: number;
+  current_quantity: number;
+  opening_inputted?: number | null;
+}
+
 const inventoryService = {
   getAll: async (): Promise<InventoryItem[]> => {
     const response = await apiClient.get('/inventory');
@@ -64,6 +73,7 @@ const inventoryService = {
       unit_cost?: number;
       reference_id?: number;
       notes?: string;
+      opening_inputted?: number;
     }
   ): Promise<StockMovement> => {
     const response = await apiClient.post(`/inventory/${id}/movements`, movementData);
@@ -72,6 +82,13 @@ const inventoryService = {
 
   getMovements: async (id: number): Promise<StockMovement[]> => {
     const response = await apiClient.get(`/inventory/${id}/movements`);
+    return response.data.data || [];
+  },
+
+  getDailySummary: async (date?: string): Promise<InventoryDailySummary[]> => {
+    const response = await apiClient.get('/inventory/daily-summary', {
+      params: date ? { date } : undefined,
+    });
     return response.data.data || [];
   },
 };

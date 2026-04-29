@@ -160,6 +160,35 @@ CREATE TABLE sales (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================================
+-- IDEMPOTENCY KEYS TABLE (Duplicate-charge and replay enforcement)
+-- ============================================================================
+CREATE TABLE idempotency_keys (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  scope VARCHAR(80) NOT NULL,
+  method VARCHAR(10) NOT NULL,
+  route VARCHAR(255) NOT NULL,
+  key_hash CHAR(64) NOT NULL,
+  key_prefix VARCHAR(16) NULL,
+  request_hash CHAR(64) NOT NULL,
+  user_id BIGINT UNSIGNED NULL,
+  status ENUM('processing','completed','failed','expired') NOT NULL DEFAULT 'processing',
+  response_code SMALLINT UNSIGNED NULL,
+  response_body JSON NULL,
+  resource_type VARCHAR(50) NULL,
+  resource_id BIGINT UNSIGNED NULL,
+  replay_count INT UNSIGNED NOT NULL DEFAULT 0,
+  locked_until DATETIME NULL,
+  expires_at DATETIME NOT NULL,
+  first_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE KEY uq_idempotency_scope_key_hash (scope, key_hash),
+  INDEX idx_idempotency_status_expires (status, expires_at),
+  INDEX idx_idempotency_route (route),
+  INDEX idx_idempotency_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================================
 -- SALE ITEMS TABLE (Line Items)
 -- ============================================================================
 CREATE TABLE sale_items (
@@ -186,12 +215,45 @@ CREATE TABLE payments (
   sale_id BIGINT UNSIGNED NOT NULL,
   method VARCHAR(64) NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
+  gateway_reference VARCHAR(128) NULL,
+  idempotency_key_hash CHAR(64) NULL,
+  request_hash CHAR(64) NULL,
+  payment_fingerprint CHAR(64) NULL,
+  replay_of_payment_id BIGINT UNSIGNED NULL,
   details JSON NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
+  FOREIGN KEY (replay_of_payment_id) REFERENCES payments(id) ON DELETE SET NULL,
   INDEX idx_payments_sale (sale_id),
   INDEX idx_payments_method (method),
-  INDEX idx_payments_created_at (created_at)
+  INDEX idx_payments_created_at (created_at),
+  INDEX idx_payments_idempotency_hash (idempotency_key_hash),
+  INDEX idx_payments_fingerprint (payment_fingerprint),
+  UNIQUE KEY uq_payments_sale_idempotency (sale_id, idempotency_key_hash),
+  UNIQUE KEY uq_payments_gateway_reference (gateway_reference)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================================
+-- PAYMENT REPLAY AUDIT TABLE
+-- ============================================================================
+CREATE TABLE payment_replay_audit (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  sale_id BIGINT UNSIGNED NULL,
+  payment_id BIGINT UNSIGNED NULL,
+  user_id BIGINT UNSIGNED NULL,
+  event_type ENUM('accepted','replayed','mismatch','blocked_duplicate','expired') NOT NULL,
+  idempotency_key_hash CHAR(64) NULL,
+  request_hash CHAR(64) NULL,
+  response_code SMALLINT UNSIGNED NULL,
+  details JSON NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL,
+  FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_payment_replay_sale (sale_id),
+  INDEX idx_payment_replay_payment (payment_id),
+  INDEX idx_payment_replay_event_type (event_type),
+  INDEX idx_payment_replay_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================================
